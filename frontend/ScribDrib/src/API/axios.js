@@ -1,0 +1,36 @@
+import axios from "axios";
+
+//creating api connection to backend
+const api = axios.create({
+    baseURL: 'http://localhost:3000',
+    headers: {
+        'Content-Type': 'application/json'
+    }
+})
+
+//interceptor function for axios automatically add token to header
+api.interceptors.request.use((config)=>{
+    const token = localStorage.getItem('token'); //taking items from local storage
+
+    if(token){
+        config.headers.Authorization = `Bearer ${token}`; //adding token to header
+    }
+
+    return config;
+},
+(error)=>{
+    return Promise.reject(error);
+}
+)
+
+//response interceptor
+api.interceptors.response.use((response)=>{
+    return response;
+},(error)=>{
+    if(error.response && error.reponse.status===401){
+        localStorage.removeItem('token');
+        window.location.href='/login';
+    }
+    return Promise.reject(error);   
+})
+export default api;

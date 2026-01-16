@@ -1,7 +1,14 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import Loader from "../ui/loader"
+import api from '../../API/axios'
 
 export default function Signup() {
+  const [runningLoader, setRunningLoader] = useState(false);
+
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -15,7 +22,7 @@ export default function Signup() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
+
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: "" }));
@@ -50,16 +57,37 @@ export default function Signup() {
     return newErrors;
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const newErrors = validateForm();
+  const handleSubmit = async (e) => {
+    e.preventDefault(); //preventing default behaiviour
+
+    const newErrors = validateForm(); //validate form client side error
+
+    setRunningLoader(true);
 
     if (Object.keys(newErrors).length === 0) {
-      // Success - form is valid
-      console.log("Account created:", formData);
-      alert("Account created successfully! ");
-      // Here we would typically make an API call
+
+      try {
+
+        const { data } = await api.post('/auth/signup', formData); //post API call
+
+        //storing token and detail in localStorage
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('userDetails', JSON.stringify(data.data));
+
+        setRunningLoader(false);
+
+        navigate("/");//navigate to HomePage
+
+      } catch (err) {
+
+        //error toast from server
+        toast.error(err?.response?.data?.msg || "Something Went Wrong!!");
+        console.log(err);
+
+      }
+
     } else {
+      //setting client side error
       setErrors(newErrors);
     }
   };
@@ -280,8 +308,9 @@ export default function Signup() {
           )}
         </div>
 
-        <button type="submit" onClick={handleSubmit}>
-          Create Account
+        <button type="submit" onClick={handleSubmit} className="flex justify-center gap-4 items-center">
+          <Loader visible={runningLoader} />
+          <span>Create Account</span>
         </button>
       </div>
 

@@ -1,7 +1,12 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import api from '../../API/axios'
+import Loader from "../ui/loader";
+
 
 export default function Login() {
+  const [runningLoader, setRunningLoader] = useState(false);
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: "",
     password: ""
@@ -35,15 +40,27 @@ export default function Login() {
     return newErrors;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault();
     const newErrors = validateForm();
+    setRunningLoader(true);
 
     if (Object.keys(newErrors).length === 0) {
-      // Success - form is valid
-      console.log("Login successful:", formData);
-      alert("Login successful! 🎉");
-      // Here you would typically make an API call
+
+      try{
+          const {data} = await api.post('/auth/login',formData);
+
+          //storing data in local storage
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('userDetails', JSON.stringify(data.data));
+
+          setRunningLoader(false);
+          navigate("/");
+      }catch(err){
+        console.log(err);
+      }
+
+
     } else {
       setErrors(newErrors);
     }
@@ -160,7 +177,8 @@ export default function Login() {
           )}
         </div>
 
-        <button type="submit" onClick={handleSubmit}>
+        <button type="submit" onClick={handleSubmit} className="flex justify-center items-center gap-4">
+          <Loader visible={runningLoader}/>
           Sign In
         </button>
       </div>
