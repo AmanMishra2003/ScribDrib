@@ -1,53 +1,3 @@
-import { useState } from "react";
-
-function RoomOptions() {
-  const [roomName, setRoomName] = useState("");
-  const [roomId, setRoomId] = useState("");
-
-  const handleCreate = () => {
-    console.log("Creating Room:", roomName);
-  };
-
-  const handleJoin = () => {
-    console.log("Joining Room:", roomId);
-  };
-
-  return (
-    <div style={styles.page}>
-      <h1 style={styles.heading}>Start a Session 🚀</h1>
-
-      <div style={styles.container}>
-        <div style={{ ...styles.box, ...styles.glowLeft }}>
-          <h2>Create Room</h2>
-          <input
-            style={styles.input}
-            placeholder="Room Name"
-            value={roomName}
-            onChange={(e) => setRoomName(e.target.value)}
-          />
-          <button style={styles.primaryBtn} onClick={handleCreate}>
-            Create
-          </button>
-        </div>
-
-        <div style={{ ...styles.box, ...styles.glowRight }}>
-          <h2>Join Room</h2>
-          <input
-            style={styles.input}
-            placeholder="Room ID"
-            value={roomId}
-            onChange={(e) => setRoomId(e.target.value)}
-          />
-          <button style={styles.secondaryBtn} onClick={handleJoin}>
-            Join
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default RoomOptions;
 
 const styles = {
   page: {
@@ -112,3 +62,95 @@ const styles = {
     cursor: "pointer",
   },
 };
+
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { socket } from "../../Socket/ws";
+
+function RoomOptions() {
+  const [roomName, setRoomName] = useState("");
+  const [roomId, setRoomId] = useState("");
+  const navigate = useNavigate();
+
+  // Cleanup socket listeners
+  useEffect(() => {
+    return () => {
+      socket.off("room-created");
+      socket.off("room-joined");
+      socket.off("error");
+    };
+  }, []);
+
+  // ================= CREATE ROOM =================
+  const handleCreate = () => {
+    if (!roomName.trim()) return alert("Enter room name");
+
+    if (!socket.connected) socket.connect();
+
+    socket.emit("createRoom", { roomName });
+
+    socket.once("roomCreated", ({ roomId }) => {
+      navigate(`/room/${roomId}`);
+    });
+
+    socket.once("error", (msg) => {
+      console.log(msg);
+      alert(msg);
+    });
+  };
+
+  // ================= JOIN ROOM =================
+  const handleJoin = () => {
+    if (!roomId.trim()) return alert("Enter room ID");
+
+    if (!socket.connected) socket.connect();
+
+    socket.emit("joinRoom", { roomId });
+
+    socket.once("roomJoined", ({ roomId, users }) => {
+      console.log("Joined Room:", { roomId, users });
+      navigate(`/room/${roomId}`);
+    });
+
+    socket.once("error", (msg) => {
+      console.log(msg);
+      alert(msg);
+    });
+  };
+
+  return (
+    <div style={styles.page}>
+      <h1 style={styles.heading}>Start a Session 🚀</h1>
+
+      <div style={styles.container}>
+        <div style={{ ...styles.box, ...styles.glowLeft }}>
+          <h2>Create Room</h2>
+          <input
+            style={styles.input}
+            placeholder="Room Name"
+            value={roomName}
+            onChange={(e) => setRoomName(e.target.value)}
+          />
+          <button style={styles.primaryBtn} onClick={handleCreate}>
+            Create
+          </button>
+        </div>
+
+        <div style={{ ...styles.box, ...styles.glowRight }}>
+          <h2>Join Room</h2>
+          <input
+            style={styles.input}
+            placeholder="Room ID"
+            value={roomId}
+            onChange={(e) => setRoomId(e.target.value)}
+          />
+          <button style={styles.secondaryBtn} onClick={handleJoin}>
+            Join
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default RoomOptions;

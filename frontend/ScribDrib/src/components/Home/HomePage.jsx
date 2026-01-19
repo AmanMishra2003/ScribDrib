@@ -2,12 +2,17 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 export default function HomePage() {
-
+  const [userInfo, setUserInfo] = useState();
   const [hasToken, setHasToken] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('userDetails');
+    console.log("User Data from localStorage:", userData);
+    if (userData) {
+      setUserInfo(JSON.parse(userData));
+    }
     if (token) {
       setHasToken(!!token); // true if token exists
     }
@@ -39,12 +44,15 @@ export default function HomePage() {
               </Link>
             </>
           ) : (
+            <>
+            <span className="capitalize">{userInfo?.name}</span>
             <button
               onClick={handleLogout}
               className="text-red-400 hover:text-red-500 transition font-semibold"
             >
               Logout
             </button>
+            </>
           )}
         </div>
       </nav>
