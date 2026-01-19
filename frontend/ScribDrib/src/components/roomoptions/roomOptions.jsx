@@ -66,6 +66,7 @@ const styles = {
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { socket } from "../../Socket/ws";
+import { toast } from "react-toastify";
 
 function RoomOptions() {
   const [roomName, setRoomName] = useState("");
@@ -73,13 +74,24 @@ function RoomOptions() {
   const navigate = useNavigate();
 
   // Cleanup socket listeners
-  useEffect(() => {
-    return () => {
-      socket.off("room-created");
-      socket.off("room-joined");
-      socket.off("error");
-    };
-  }, []);
+ useEffect(() => {
+  socket.on("connect_error", (err) => {
+    console.log("Socket error:", err.message);
+
+    if (
+      err.message.includes("token") ||
+      err.message.includes("Authentication")
+    ) {
+      toast.error("Session expired. Please login again.");
+      socket.disconnect();
+      navigate("/auth/login");
+    }
+  });
+
+  return () => {
+    socket.off("connect_error");
+  };
+}, [navigate]);
 
   // ================= CREATE ROOM =================
   const handleCreate = () => {

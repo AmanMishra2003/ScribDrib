@@ -1,5 +1,5 @@
 import './App.css'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route,Navigate } from 'react-router-dom'
 import { ToastContainer } from 'react-toastify';
 import RoomOptions from "./components/roomoptions/roomOptions.jsx";
 import RoomPage from "./components/roomoptions/RoomPage.jsx";
@@ -18,6 +18,16 @@ import Signup from './components/AuthComponents/Signup'
 // White Board Demo Component
 import Whiteboard from './components/WhiteBoardLibrary/WhiteBoard';
 
+function ProtectRoute({ children }) {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    return <Navigate to="/auth/login" replace />;
+  }
+
+  return children;
+}
+
 function App() {
   return (
     <>
@@ -26,8 +36,8 @@ function App() {
       {/* Home page */}
       <Route path='/' element={<HomePage />} />
       <Route path='/demo' element={<Whiteboard/>}/>
-      <Route path="/joinRoom" element={<RoomOptions />} />
-      <Route path="/room/:roomId" element={<RoomPage/>}/>
+      <Route path="/joinRoom" element={<ProtectRoute><RoomOptions /></ProtectRoute>} />
+      <Route path="/room/:roomId" element={<ProtectRoute><RoomPage/></ProtectRoute>}/>
       {/* Auth layout */}
       <Route path='/auth' element={<AuthComponent />}>
         <Route path='login' element={<Login />} />
