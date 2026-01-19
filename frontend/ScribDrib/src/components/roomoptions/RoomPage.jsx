@@ -50,15 +50,11 @@ function RoomPage() {
     navigate("/");
   };
 
-  return (
-    <div style={styles.page}>
-      <h1 style={styles.heading}>Room: {roomId}</h1>
-
-      <button style={styles.leaveBtn} onClick={leaveRoom}>
-        Leave Room 🚪
-      </button>
-    </div>
-  );
+  return(
+    <>
+    {/* //code  */}
+    </>
+  )
 }
 
 export default RoomPage;
@@ -89,3 +85,15 @@ const styles = {
     cursor: "pointer",
   },
 };
+
+
+
+// return (
+//     <div style={styles.page}>
+//       <h1 style={styles.heading}>Room: {roomId}</h1>
+
+//       <button style={styles.leaveBtn} onClick={leaveRoom}>
+//         Leave Room 🚪
+//       </button>
+//     </div>
+//   );
