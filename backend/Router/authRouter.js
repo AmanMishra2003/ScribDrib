@@ -12,6 +12,7 @@ router.post('/signup', async(req,res,next)=>{
     try{
         // console.log(req.body);
         const {fullName, email, password} = req.body;
+        console.log(req.body);
 
         //checking user exist or not
         const userExist = await User.findOne({email});
@@ -32,7 +33,7 @@ router.post('/signup', async(req,res,next)=>{
         
         //sign JWT
         const token = await jwt.sign({id: newUser._id}, process.env.JWTSECRET,{expiresIn:'1d'});
-
+console.log(token)
         res.status(200).json({
             token,
             data:{
@@ -43,7 +44,7 @@ router.post('/signup', async(req,res,next)=>{
         })
        
     }catch(err){
-        // console.log(err);
+        console.log(err);
         res.status(500).json({
             message:"Server Error",
             errMsg:err
@@ -55,6 +56,7 @@ router.post('/signup', async(req,res,next)=>{
 router.post('/login', async(req,res,next)=>{
     try{
         const {email, password} = req.body;
+        console.log(req.body);
        
         
         //checking user exist or not
