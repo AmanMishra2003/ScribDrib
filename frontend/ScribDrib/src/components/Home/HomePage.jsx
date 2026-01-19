@@ -60,13 +60,23 @@ export default function HomePage() {
         <p className="max-w-xl text-slate-300 text-lg md:text-xl mb-6">
           A modern platform built for speed, performance, and beautiful user experience.
         </p>
-        <Link
+        <div ckassName="flex gap-4" style={{margin:'20px'}}>
+          <Link
+          to="/joinRoom"
+          className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg"
+          style={{ padding: "10px", margin: "10px" }}
+        >
+          Join Room
+        </Link>
+          <Link
           to="/demo"
           className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg"
           style={{ padding: "10px", margin: "10px" }}
         >
           Demo
         </Link>
+        </div>
+        
       </header>
 
       {/* Features Section */}

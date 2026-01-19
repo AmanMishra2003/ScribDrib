@@ -24,16 +24,12 @@ function App() {
       {/* Home page */}
       <Route path='/' element={<HomePage />} />
       <Route path='/demo' element={<Whiteboard/>}/>
-      <Route path="/room-options" element={<RoomOptions />} />
+      <Route path="/joinRoom" element={<RoomOptions />} />
       {/* Auth layout */}
       <Route path='/auth' element={<AuthComponent />}>
         <Route path='login' element={<Login />} />
         <Route path='signup' element={<Signup />} />
         {/*Room Options*/}
-      
-
-
-
       </Route>
     </Routes>
     </>
