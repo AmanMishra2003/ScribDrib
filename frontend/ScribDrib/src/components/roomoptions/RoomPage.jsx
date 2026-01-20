@@ -9,28 +9,39 @@ function RoomPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("members");
   const [micOn, setMicOn] = useState(true);
+  const [members, setMembers] = useState([]);
 
   useEffect(() => {
     if (!socket.connected) socket.connect();
-    socket.emit("join-room", { roomId });
 
-    socket.on("room-joined", ({ roomName }) =>
-      toast.success(`Joined room: ${roomName}`)
-    );
-    socket.on("user-joined", ({ name }) =>
-      toast.info(`${name} joined the room`)
-    );
-    socket.on("user-left", ({ name }) =>
-      toast.info(`${name} left the room`)
-    );
+    socket.emit("joinRoom", { roomId });
+
+    socket.on("roomJoined", ({ roomName, users }) => {
+      toast.success(`Joined room: ${roomName}`);
+      setMembers(users); // ✅ initial members
+    });
+
+    socket.on("userJoined", ({ userId, name }) => {
+      setMembers((prev) => {
+        if (prev.some((u) => u.userId === userId)) return prev;
+        return [...prev, { userId, name }];
+      });
+      toast.info(`${name} joined the room`);
+    });
+
+    socket.on("user-left", ({ userId, name }) => {
+      setMembers((prev) => prev.filter((m) => m.userId !== userId));
+      toast.info(`${name} left the room`);
+    });
+
     socket.on("room-closed", () => {
       toast.error("Host left. Room closed.");
       navigate("/");
     });
 
     return () => {
-      socket.off("room-joined");
-      socket.off("user-joined");
+      socket.off("roomJoined");
+      socket.off("userJoined");
       socket.off("user-left");
       socket.off("room-closed");
     };
@@ -68,7 +79,7 @@ function RoomPage() {
           </div>
         </div>
 
-        <Whiteboard />
+        <Whiteboard roomId={roomId} />
       </div>
 
       {/* RIGHT PANEL */}
@@ -95,7 +106,7 @@ function RoomPage() {
         </div>
 
         <div style={styles.tabContent}>
-          {activeTab === "members" && <Members />}
+          {activeTab === "members" && <Members members={members} />}
           {activeTab === "chat" && <ChatBox />}
           {activeTab === "image" && <ImageGenerator />}
         </div>
@@ -117,48 +128,27 @@ function MicIcon({ isOn }) {
   );
 }
 
-function Members() {
-  const [members, setMembers] = useState([
-    { id: 1, name: "Ayush", micOn: true, canDraw: true },
-    { id: 2, name: "Aman", micOn: false, canDraw: false },
-    { id: 3, name: "Riya", micOn: true, canDraw: true },
-  ]);
-
-  const toggleMic = (id) => {
-    setMembers((prev) =>
-      prev.map((m) =>
-        m.id === id ? { ...m, micOn: !m.micOn } : m
-      )
+function Members({ members }) {
+  if (!members || members.length === 0) {
+    return (
+      <p style={{ opacity: 0.6, fontSize: "13px" }}>
+        No members in room
+      </p>
     );
-  };
-
-  const toggleDraw = (id) => {
-    setMembers((prev) =>
-      prev.map((m) =>
-        m.id === id ? { ...m, canDraw: !m.canDraw } : m
-      )
-    );
-  };
+  }
 
   return (
     <div>
       {members.map((m) => (
-        <div key={m.id} style={memberStyles.row}>
+        <div key={m.userId} style={memberStyles.row}>
           <span>{m.name}</span>
 
           <div style={memberStyles.actions}>
-            <button
-              style={m.micOn ? styles.voiceBtn : styles.voiceBtnOff}
-              onClick={() => toggleMic(m.id)}
-            >
-              <MicIcon isOn={m.micOn} />
+            <button style={styles.voiceBtn} title="Mic">
+              🎙️
             </button>
 
-            <button
-              style={m.canDraw ? styles.drawBtn : styles.drawBtnOff}
-              onClick={() => toggleDraw(m.id)}
-              title="Toggle draw permission"
-            >
+            <button style={styles.drawBtn} title="Draw permission">
               ✏️
             </button>
           </div>
@@ -169,11 +159,7 @@ function Members() {
 }
 
 function ChatBox() {
-  const [messages, setMessages] = useState([
-    { id: 1, user: "Ayush", text: "Hey!", time: "12:30 PM" },
-    { id: 2, user: "Aman", text: "Looks good", time: "12:31 PM" },
-  ]);
-
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const messagesEndRef = useRef(null);
 
@@ -291,14 +277,6 @@ const styles = {
   drawBtn: {
     border: "1px solid rgba(255,255,255,0.4)",
     background: "rgba(255,255,255,0.1)",
-    borderRadius: "6px",
-    padding: "6px 10px",
-    cursor: "pointer",
-  },
-
-  drawBtnOff: {
-    border: "1px solid rgba(255,0,0,0.6)",
-    background: "rgba(255,0,0,0.15)",
     borderRadius: "6px",
     padding: "6px 10px",
     cursor: "pointer",

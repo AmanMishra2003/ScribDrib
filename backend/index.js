@@ -162,6 +162,8 @@ io.on('connection', (socket) => {
         userId: user._id,
         name: user.fullName,
       });
+      room.isActive = true;
+      
 
     } catch (err) {
       console.error("Disconnect error:", err);
