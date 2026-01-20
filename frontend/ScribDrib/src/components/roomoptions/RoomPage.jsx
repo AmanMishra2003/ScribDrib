@@ -119,19 +119,49 @@ function MicIcon({ isOn }) {
 
 function Members() {
   const [members, setMembers] = useState([
-    { id: 1, name: "Ayush", micOn: true },
-    { id: 2, name: "Aman", micOn: false },
-    { id: 3, name: "Riya", micOn: true },
+    { id: 1, name: "Ayush", micOn: true, canDraw: true },
+    { id: 2, name: "Aman", micOn: false, canDraw: false },
+    { id: 3, name: "Riya", micOn: true, canDraw: true },
   ]);
+
+  const toggleMic = (id) => {
+    setMembers((prev) =>
+      prev.map((m) =>
+        m.id === id ? { ...m, micOn: !m.micOn } : m
+      )
+    );
+  };
+
+  const toggleDraw = (id) => {
+    setMembers((prev) =>
+      prev.map((m) =>
+        m.id === id ? { ...m, canDraw: !m.canDraw } : m
+      )
+    );
+  };
 
   return (
     <div>
       {members.map((m) => (
         <div key={m.id} style={memberStyles.row}>
           <span>{m.name}</span>
-          <button style={m.micOn ? styles.voiceBtn : styles.voiceBtnOff}>
-            <MicIcon isOn={m.micOn} />
-          </button>
+
+          <div style={memberStyles.actions}>
+            <button
+              style={m.micOn ? styles.voiceBtn : styles.voiceBtnOff}
+              onClick={() => toggleMic(m.id)}
+            >
+              <MicIcon isOn={m.micOn} />
+            </button>
+
+            <button
+              style={m.canDraw ? styles.drawBtn : styles.drawBtnOff}
+              onClick={() => toggleDraw(m.id)}
+              title="Toggle draw permission"
+            >
+              ✏️
+            </button>
+          </div>
         </div>
       ))}
     </div>
@@ -165,7 +195,6 @@ function ChatBox() {
     setInput("");
   };
 
-  //AUTO SCROLL TO BOTTOM
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -259,6 +288,22 @@ const styles = {
     cursor: "pointer",
   },
 
+  drawBtn: {
+    border: "1px solid rgba(255,255,255,0.4)",
+    background: "rgba(255,255,255,0.1)",
+    borderRadius: "6px",
+    padding: "6px 10px",
+    cursor: "pointer",
+  },
+
+  drawBtnOff: {
+    border: "1px solid rgba(255,0,0,0.6)",
+    background: "rgba(255,0,0,0.15)",
+    borderRadius: "6px",
+    padding: "6px 10px",
+    cursor: "pointer",
+  },
+
   micSlash: {
     position: "absolute",
     top: "-2px",
@@ -331,7 +376,7 @@ const chatStyles = {
     overflowY: "auto",
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
+    gap: "10px",
   },
 
   messageCard: {
@@ -357,7 +402,7 @@ const chatStyles = {
     display: "flex",
     gap: "6px",
     borderTop: "1px solid rgba(255,255,255,0.2)",
-    paddingTop: "8px",
+    paddingTop: "5px",
     flexShrink: 0,
   },
 
@@ -384,7 +429,13 @@ const memberStyles = {
   row: {
     display: "flex",
     justifyContent: "space-between",
+    alignItems: "center",
     padding: "8px",
     borderBottom: "1px solid rgba(255,255,255,0.15)",
+  },
+
+  actions: {
+    display: "flex",
+    gap: "8px",
   },
 };
