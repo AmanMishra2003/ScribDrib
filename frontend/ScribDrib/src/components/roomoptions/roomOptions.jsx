@@ -118,12 +118,13 @@ function RoomOptions() {
 
     socket.emit("joinRoom", { roomId });
 
-    socket.once("roomJoined", ({ roomId, users }) => {
-      console.log("Joined Room:", { roomId, users });
+    socket.once("roomJoined", ({ roomId,  }) => {
+      // console.log("Joined Room:", { roomId, users });
       navigate(`/room/${roomId}`);
     });
 
     socket.once("error", (msg) => {
+      toast.error(msg);
       console.log(msg);
       alert(msg);
     });
