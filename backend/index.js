@@ -8,17 +8,17 @@ const socketAuth = require('./middleware/socketAuth');
 const Room = require('./models/roomModel');
 const { v4: uuidv4 } = require('uuid');
 
-const app = express(); //initializing app
-const port = 3000; //port name
+const app = express();
+const port = 3000;
 
 app.use(cors({
   origin: 'http://localhost:5173',
   credentials: true
-})); //cross origin resourse sharing
+}));
 
-app.use(express.json());  //parse JSON string to JS Object
+app.use(express.json());
 
-//Database connection
+// Database connection
 const mongodbPath = process.env.DATABASEURL
 mongoose.connect(mongodbPath).then(() => {
   console.log("connection successfull!")
@@ -26,15 +26,14 @@ mongoose.connect(mongodbPath).then(() => {
   console.log(err)
 })
 
-//router imports
+// Router imports
 const HomeRouter = require('./Router/homeRouter');
 const AuthRouter = require('./Router/authRouter');
 
 app.use('/', HomeRouter);
 app.use('/auth', AuthRouter);
 
-
-//error handler
+// Error handler
 app.use((err, req, res, next) => {
   res.status(400).json({
     message: err.message || "Something went wrong",
@@ -44,7 +43,7 @@ app.use((err, req, res, next) => {
 // ------ HTTP Server and Socket.io setup ------
 const server = createServer(app);
 
-//Socket.io setup
+// Socket.io setup
 const io = new Server(server, {
   cors: {
     origin: "http://localhost:5173",
@@ -52,20 +51,27 @@ const io = new Server(server, {
   }
 });
 
-//socket Middleware Token Authentication
+// Socket Middleware Token Authentication
 io.use(socketAuth)
 
-//----Join ROOM Logic
+// Store socket to user mapping
+const socketToUser = new Map();
+
+// ---- Socket.io Event Handlers ----
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.id}`);
+  const user = socket.user;
+  
+  // Store socket mapping
+  socketToUser.set(socket.id, user);
 
+  // ===== CREATE ROOM =====
   socket.on('createRoom', async ({ roomName }) => {
     try {
-      const roomId = uuidv4().replace(/-/g, '').slice(0, 8); //generating unique room id
-      const user = socket.user;
+      const roomId = uuidv4().replace(/-/g, '').slice(0, 8);
 
-      //create room in db
-      await Room.create({
+      // Create room in db
+      const newRoom = await Room.create({
         roomName,
         host: user._id,
         roomId,
@@ -76,46 +82,70 @@ io.on('connection', (socket) => {
         }]
       });
 
-      socket.join(roomId); //joining socket.io room
+      socket.join(roomId);
+      console.log(`Room created: ${roomId} by ${user.fullName}`);
 
       socket.emit('roomCreated', { roomId, roomName });
     } catch (err) {
       console.log("Create Room Error:", err);
       socket.emit('error', { msg: "Error creating room" });
     }
-  })
+  });
 
-  //======JoinRoomi Login=====
+  // ===== JOIN ROOM =====
   socket.on('joinRoom', async ({ roomId }) => {
     try {
-      const user = socket.user; //user
-
-      //room search
+      // Find room
       const room = await Room.findOne({ roomId, isActive: true });
-      //if room not found return error
+      
       if (!room) {
         return socket.emit('error', { msg: "Room not found or inactive" });
       }
 
-      const alreadyInRoom = room.users.some(u => u.userId.toString() === user._id.toString());
-      if (!alreadyInRoom) {
+      // Check if user already in room
+      const existingUserIndex = room.users.findIndex(
+        u => u.userId.toString() === user._id.toString()
+      );
+
+      if (existingUserIndex !== -1) {
+        // Update socket ID if user reconnecting
+        room.users[existingUserIndex].socketId = socket.id;
+      } else {
+        // Add new user
         room.users.push({
           userId: user._id,
           name: user.fullName,
           socketId: socket.id
         });
-        await room.save();
       }
 
-      socket.join(roomId); //joining socket.io room
+      await room.save();
+      socket.join(roomId);
 
-      socket.emit('roomJoined', {
+      console.log(`${user.fullName} joined room: ${roomId}`);
+
+      // Parse board data
+      let parsedBoard = null;
+      try {
+        parsedBoard = room.boardData && room.boardData.length > 0
+          ? JSON.parse(room.boardData)
+          : null;
+      } catch (e) {
+        console.error("Invalid board JSON");
+      }
+
+      // Send room data to joining user
+      socket.emit("roomJoined", {
         roomId: room.roomId,
         roomName: room.roomName,
-        boardData: room.boardData,
-        users: room.users.map(u => ({ userId: u.userId, name: u.name }))
+        boardData: parsedBoard,
+        users: room.users.map(u => ({ 
+          userId: u.userId, 
+          name: u.name 
+        }))
       });
 
+      // Notify others in room
       socket.to(roomId).emit('userJoined', {
         userId: user._id,
         name: user.fullName
@@ -125,59 +155,103 @@ io.on('connection', (socket) => {
       console.log("Join Room Error:", err);
       socket.emit('error', { msg: "Error joining room" });
     }
-  })
+  });
 
-  //====Disconnection Logic====
-  socket.on("disconnect", async () => {
+  // ===== BOARD UPDATE =====
+  socket.on("board:update", async ({ roomId, boardData }) => {
     try {
-      const user = socket.user; // authenticated user
+      const serialized = JSON.stringify(boardData);
 
-      // find the active room where this user exists
-      const room = await Room.findOne({
-        "users.userId": user._id,
-        isActive: true,
-      });
-
-      if (!room) return;
-
-      // remove user from room
-      room.users = room.users.filter(
-        (u) => u.userId.toString() !== user._id.toString()
+      await Room.findOneAndUpdate(
+        { roomId, isActive: true },
+        { boardData: serialized }
       );
 
-      //HOST LEFT
-      if (room.host.toString() === user._id.toString()) {
-        room.isActive = false;
-        await room.save();
-
-        // notify everyone
-        io.to(room.roomId).emit("room-closed");
-        return;
-      }
-
-      //NORMAL USER LEFT
-      await room.save();
-      console.log(user);
-      socket.to(room.roomId).emit("user-left", {
-        userId: user._id,
-        name: user.fullName,
-      });
-      room.isActive = true;
-      
-
+      // Broadcast to others in room
+      socket.to(roomId).emit("board:update", boardData);
     } catch (err) {
-      console.error("Disconnect error:", err);
+      console.error("Board update error:", err);
     }
   });
 
+  // ===== CHAT MESSAGE =====
+  socket.on("chat:message", async ({ roomId, message }) => {
+    try {
+      // Broadcast message to all users in room except sender
+      socket.to(roomId).emit("chat:message", message);
+    } catch (err) {
+      console.error("Chat message error:", err);
+    }
+  });
+
+  // ===== DISCONNECT =====
+  socket.on("disconnect", async () => {
+    try {
+      console.log(`User disconnected: ${socket.id}`);
+      
+      const disconnectedUser = socketToUser.get(socket.id);
+      if (!disconnectedUser) {
+        console.log("No user found for socket:", socket.id);
+        return;
+      }
+
+      // Find the active room where this user exists
+      const room = await Room.findOne({
+        "users.socketId": socket.id,
+        isActive: true,
+      });
+
+      if (!room) {
+        console.log("No active room found for user");
+        socketToUser.delete(socket.id);
+        return;
+      }
+
+      console.log(`User ${disconnectedUser.fullName} leaving room ${room.roomId}`);
+
+      // Remove user from room
+      room.users = room.users.filter(
+        (u) => u.socketId !== socket.id
+      );
+
+      // Check if host left
+      if (room.host.toString() === disconnectedUser._id.toString()) {
+        room.isActive = false;
+        await room.save();
+
+        // Notify everyone room is closed
+        io.to(room.roomId).emit("room-closed");
+        
+        // Make all sockets leave the room
+        const socketsInRoom = await io.in(room.roomId).fetchSockets();
+        socketsInRoom.forEach(s => s.leave(room.roomId));
+        
+        console.log(`Host left. Room ${room.roomId} closed.`);
+      } else {
+        // Normal user left
+        await room.save();
+        
+        // Notify others
+        socket.to(room.roomId).emit("user-left", {
+          userId: disconnectedUser._id,
+          name: disconnectedUser.fullName,
+        });
+        
+        console.log(`User ${disconnectedUser.fullName} left room ${room.roomId}`);
+      }
+
+      // Clean up socket mapping
+      socketToUser.delete(socket.id);
+
+    } catch (err) {
+      console.error("Disconnect error:", err);
+      socketToUser.delete(socket.id);
+    }
+  });
 
 });
 
-
-
-
-
-//listening to port 3000 (Backend Running)
+// Listening to port 3000
 server.listen(port, () => {
-  console.log("listening!!");
-})
+  console.log(`Server running on port ${port}`);
+});
