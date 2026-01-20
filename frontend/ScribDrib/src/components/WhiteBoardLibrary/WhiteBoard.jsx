@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { socket } from "../../Socket/ws";
 import {
     MousePointer2,
     Pencil,
@@ -15,9 +16,6 @@ import {
     Ungroup,
 } from "lucide-react";
 
-/**
- * Tool constants (replaces TS enum)
- */
 const Tool = {
     SELECT: "select",
     PEN: "pen",
@@ -30,11 +28,11 @@ const Tool = {
 
 const BG_COLOR = "#020617";
 
-const Whiteboard = () => {
+const Whiteboard = ({ roomId, initialBoard }) => {
     const canvasRef = useRef(null);
     const fabricCanvas = useRef(null);
+    const hasLoadedInitialBoard = useRef(false);
 
-    // State for UI rendering
     const [activeTool, setActiveTool] = useState(Tool.SELECT);
     const [strokeColor, setStrokeColor] = useState("#3b82f6");
     const [fillColor, setFillColor] = useState("transparent");
@@ -42,13 +40,11 @@ const Whiteboard = () => {
     const [canUndo, setCanUndo] = useState(false);
     const [canRedo, setCanRedo] = useState(false);
 
-    // REFS for event handlers to avoid stale closures
     const activeToolRef = useRef(activeTool);
     const strokeColorRef = useRef(strokeColor);
     const fillColorRef = useRef(fillColor);
     const strokeWidthRef = useRef(strokeWidth);
 
-    // Sync refs with state
     useEffect(() => { activeToolRef.current = activeTool; }, [activeTool]);
     useEffect(() => { strokeColorRef.current = strokeColor; }, [strokeColor]);
     useEffect(() => { fillColorRef.current = fillColor; }, [fillColor]);
@@ -57,12 +53,83 @@ const Whiteboard = () => {
     const undoStack = useRef([]);
     const redoStack = useRef([]);
     const isStateChanging = useRef(false);
+    const saveTimeout = useRef(null);
 
     const isMouseDown = useRef(false);
     const currentShape = useRef(null);
     const startPoint = useRef({ x: 0, y: 0 });
 
-    // 1. Initialize Canvas
+    // Debounced save state with immediate local update
+    const saveState = (immediate = false) => {
+        if (!fabricCanvas.current || isStateChanging.current) return;
+
+        const json = fabricCanvas.current.toJSON();
+        const serialized = JSON.stringify(json);
+
+        if (undoStack.current[undoStack.current.length - 1] !== serialized) {
+            undoStack.current.push(serialized);
+            if (undoStack.current.length > 50) undoStack.current.shift();
+            redoStack.current = [];
+            setCanUndo(undoStack.current.length > 1);
+            setCanRedo(false);
+
+            // Clear existing timeout
+            if (saveTimeout.current) {
+                clearTimeout(saveTimeout.current);
+            }
+
+            // Debounce socket emit unless immediate
+            if (immediate) {
+                socket.emit("board:update", { roomId, boardData: json });
+            } else {
+                saveTimeout.current = setTimeout(() => {
+                    socket.emit("board:update", { roomId, boardData: json });
+                }, 300); // 300ms debounce
+            }
+        }
+    };
+
+    // Load initial board data
+    useEffect(() => {
+        if (!fabricCanvas.current || !initialBoard || hasLoadedInitialBoard.current) return;
+
+        isStateChanging.current = true;
+        fabricCanvas.current.loadFromJSON(initialBoard, () => {
+            fabricCanvas.current.renderAll();
+            isStateChanging.current = false;
+            hasLoadedInitialBoard.current = true;
+            
+            const serialized = JSON.stringify(initialBoard);
+            undoStack.current = [serialized];
+            setCanUndo(false);
+        });
+    }, [initialBoard]);
+
+    // Socket.io board updates
+    useEffect(() => {
+        if (!fabricCanvas.current) return;
+
+        const handleBoardUpdate = (boardData) => {
+            if (!boardData) return;
+            
+            isStateChanging.current = true;
+            fabricCanvas.current.loadFromJSON(boardData, () => {
+                fabricCanvas.current.renderAll();
+                isStateChanging.current = false;
+            });
+        };
+
+        socket.on("board:update", handleBoardUpdate);
+
+        return () => {
+            socket.off("board:update", handleBoardUpdate);
+            if (saveTimeout.current) {
+                clearTimeout(saveTimeout.current);
+            }
+        };
+    }, []);
+
+    // Initialize Canvas
     useEffect(() => {
         if (!canvasRef.current) return;
 
@@ -72,6 +139,9 @@ const Whiteboard = () => {
             backgroundColor: BG_COLOR,
             isDrawingMode: false,
             selection: true,
+            renderOnAddRemove: true,
+            enableRetinaScaling: true,
+            stateful: true,
         });
 
         fabricCanvas.current = canvas;
@@ -86,13 +156,19 @@ const Whiteboard = () => {
 
         window.addEventListener("resize", handleResize);
 
-        // Initial state save
-        saveState();
+        // Event Listeners - debounced saves
+        const handleObjectAdded = () => !isStateChanging.current && saveState();
+        const handleObjectModified = () => !isStateChanging.current && saveState(true); // Immediate for modifications
+        const handleObjectRemoved = () => !isStateChanging.current && saveState(true);
 
-        // Event Listeners
-        canvas.on("object:added", () => !isStateChanging.current && saveState());
-        canvas.on("object:modified", () => !isStateChanging.current && saveState());
-        canvas.on("object:removed", () => !isStateChanging.current && saveState());
+        canvas.on("object:added", handleObjectAdded);
+        canvas.on("object:modified", handleObjectModified);
+        canvas.on("object:removed", handleObjectRemoved);
+
+        // Real-time object updates during manipulation
+        canvas.on("object:moving", () => canvas.requestRenderAll());
+        canvas.on("object:scaling", () => canvas.requestRenderAll());
+        canvas.on("object:rotating", () => canvas.requestRenderAll());
 
         canvas.on("mouse:down", (opt) => handleMouseDown(opt, canvas));
         canvas.on("mouse:move", (opt) => handleMouseMove(opt, canvas));
@@ -120,11 +196,17 @@ const Whiteboard = () => {
         return () => {
             window.removeEventListener("resize", handleResize);
             window.removeEventListener("keydown", handleKeyDown);
+            canvas.off("object:added", handleObjectAdded);
+            canvas.off("object:modified", handleObjectModified);
+            canvas.off("object:removed", handleObjectRemoved);
+            canvas.off("object:moving");
+            canvas.off("object:scaling");
+            canvas.off("object:rotating");
             canvas.dispose();
         };
     }, []);
 
-    // Sync tool modes to the Fabric canvas instance
+    // Sync tool modes
     useEffect(() => {
         const canvas = fabricCanvas.current;
         if (!canvas) return;
@@ -160,37 +242,37 @@ const Whiteboard = () => {
         canvas.requestRenderAll();
     }, [activeTool, strokeColor, strokeWidth]);
 
-    // Handle color/stroke changes for existing selection
+    // Handle color/stroke changes for selection - INSTANT UPDATE
     useEffect(() => {
         const canvas = fabricCanvas.current;
         if (!canvas) return;
         const activeObjects = canvas.getActiveObjects();
         if (activeObjects.length > 0) {
+            // Disable events temporarily for smooth update
+            isStateChanging.current = true;
+            
             activeObjects.forEach((obj) => {
-                obj.set({ stroke: strokeColor, strokeWidth });
+                obj.set({ 
+                    stroke: strokeColor, 
+                    strokeWidth,
+                    dirty: true 
+                });
                 if (!["line", "i-text"].includes(obj.type)) {
                     obj.set({ fill: fillColor === "transparent" ? "transparent" : fillColor });
                 }
                 if (obj.type === "i-text") {
                     obj.set({ fill: strokeColor });
                 }
+                obj.setCoords();
             });
+            
             canvas.requestRenderAll();
-            saveState();
+            isStateChanging.current = false;
+            
+            // Save after render
+            saveState(true);
         }
     }, [strokeColor, fillColor, strokeWidth]);
-
-    const saveState = () => {
-        if (!fabricCanvas.current) return;
-        const json = JSON.stringify(fabricCanvas.current.toJSON());
-        if (undoStack.current[undoStack.current.length - 1] !== json) {
-            undoStack.current.push(json);
-            if (undoStack.current.length > 50) undoStack.current.shift();
-            redoStack.current = [];
-            setCanUndo(undoStack.current.length > 1);
-            setCanRedo(false);
-        }
-    };
 
     const undo = () => {
         if (undoStack.current.length <= 1) return;
@@ -239,6 +321,7 @@ const Whiteboard = () => {
             selectable: false,
             evented: false,
             strokeUniform: true,
+            objectCaching: false, // Disable caching for smooth updates
         };
 
         switch (tool) {
@@ -280,6 +363,9 @@ const Whiteboard = () => {
         const pointer = canvas.getPointer(opt.e);
         const shape = currentShape.current;
 
+        // Batch updates for smoother rendering
+        canvas.discardActiveObject();
+        
         switch (tool) {
             case Tool.RECT:
                 shape.set({
@@ -287,6 +373,7 @@ const Whiteboard = () => {
                     height: Math.abs(pointer.y - startPoint.current.y),
                     left: Math.min(pointer.x, startPoint.current.x),
                     top: Math.min(pointer.y, startPoint.current.y),
+                    dirty: true,
                 });
                 break;
             case Tool.CIRCLE: {
@@ -297,15 +384,17 @@ const Whiteboard = () => {
                     radius,
                     left: Math.min(pointer.x, startPoint.current.x),
                     top: Math.min(pointer.y, startPoint.current.y),
+                    dirty: true,
                 });
                 break;
             }
             case Tool.LINE:
-                shape.set({ x2: pointer.x, y2: pointer.y });
+                shape.set({ x2: pointer.x, y2: pointer.y, dirty: true });
                 break;
         }
 
-        canvas.renderAll();
+        shape.setCoords();
+        canvas.requestRenderAll();
     };
 
     const handleMouseUp = (canvas) => {
@@ -321,12 +410,16 @@ const Whiteboard = () => {
             ) {
                 canvas.remove(currentShape.current);
             } else {
-                currentShape.current.set({ selectable: true, evented: true });
+                currentShape.current.set({ 
+                    selectable: true, 
+                    evented: true,
+                    objectCaching: true, // Re-enable caching after creation
+                });
                 currentShape.current.setCoords();
             }
             currentShape.current = null;
             canvas.renderAll();
-            saveState();
+            saveState(true); // Immediate save on mouse up
         }
     };
 
@@ -337,8 +430,8 @@ const Whiteboard = () => {
         if (activeObjects.length > 0) {
             canvas.discardActiveObject();
             activeObjects.forEach((obj) => canvas.remove(obj));
-            canvas.renderAll();
-            saveState();
+            canvas.requestRenderAll();
+            saveState(true);
         }
     };
 
@@ -364,7 +457,7 @@ const Whiteboard = () => {
             }
             canvas.setActiveObject(cloned);
             canvas.requestRenderAll();
-            saveState();
+            saveState(true);
         });
     };
 
@@ -374,7 +467,7 @@ const Whiteboard = () => {
         if (!activeObj || activeObj.type !== "activeSelection") return;
         activeObj.toGroup();
         canvas.requestRenderAll();
-        saveState();
+        saveState(true);
     };
 
     const ungroupSelected = () => {
@@ -383,7 +476,7 @@ const Whiteboard = () => {
         if (!activeObj || activeObj.type !== "group") return;
         activeObj.toActiveSelection();
         canvas.requestRenderAll();
-        saveState();
+        saveState(true);
     };
 
     const tools = [
@@ -398,16 +491,17 @@ const Whiteboard = () => {
 
     return (
         <div className="flex flex-col md:flex-row h-full p-2">
-            <div className="flex md:flex-col gap-2 p-5 bg-slate-900 border-r border-slate-800 z-10 overflow-x-auto no-scrollbar ">
+            <div className="flex md:flex-col gap-2 p-5 bg-slate-900 border-r border-slate-800 z-10 overflow-x-auto no-scrollbar">
                 {tools.map((tool) => (
                     <button
                         key={tool.id}
                         onClick={() => setActiveTool(tool.id)}
-                        className={`rounded-lg transition-all duration-200 flex items-center justify-center gap-2 group relative m-5 ${activeTool === tool.id
+                        className={`rounded-lg transition-all duration-200 flex items-center justify-center gap-2 group relative m-5 ${
+                            activeTool === tool.id
                                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40'
                                 : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-100'
-                            }`}
-                            style={{  padding: '12px 10px' }}
+                        }`}
+                        style={{ padding: '12px 10px' }}
                         title={tool.label}
                     >
                         <tool.icon size={20} />
@@ -422,10 +516,11 @@ const Whiteboard = () => {
                 <button
                     onClick={undo}
                     disabled={!canUndo}
-                    className={`p-3 rounded-lg flex items-center justify-center gap-2 ${canUndo
+                    className={`p-3 rounded-lg flex items-center justify-center gap-2 ${
+                        canUndo
                             ? 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-100'
                             : 'bg-slate-800/50 text-slate-700 cursor-not-allowed'
-                        }`}
+                    }`}
                     title="Undo"
                 >
                     <Undo2 size={20} />
@@ -434,10 +529,11 @@ const Whiteboard = () => {
                 <button
                     onClick={redo}
                     disabled={!canRedo}
-                    className={`p-3 rounded-lg flex items-center justify-center gap-2 ${canRedo
+                    className={`p-3 rounded-lg flex items-center justify-center gap-2 ${
+                        canRedo
                             ? 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-100'
                             : 'bg-slate-800/50 text-slate-700 cursor-not-allowed'
-                        }`}
+                    }`}
                     title="Redo"
                 >
                     <Redo2 size={20} />
@@ -447,8 +543,7 @@ const Whiteboard = () => {
             <div className="flex-1 relative bg-slate-950 overflow-hidden cursor-crosshair p-2">
                 <canvas ref={canvasRef} className="p-2" />
 
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-4 px-4 py-2 bg-slate-900/90 backdrop-blur-sm border border-slate-800 rounded-2xl shadow-2xl z-20 max-w-[95vw] overflow-x-auto p-4" style={{padding:'12px 10px'}}>
-
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-4 px-4 py-2 bg-slate-900/90 backdrop-blur-sm border border-slate-800 rounded-2xl shadow-2xl z-20 max-w-[95vw] overflow-x-auto p-4" style={{ padding: '12px 10px' }}>
                     <div className="flex flex-col gap-1 min-w-fit p-2">
                         <label className="text-[10px] uppercase tracking-wider text-slate-500 font-bold px-1">
                             Stroke
@@ -471,17 +566,19 @@ const Whiteboard = () => {
                                 value={fillColor === 'transparent' ? '#000000' : fillColor}
                                 onChange={(e) => setFillColor(e.target.value)}
                                 disabled={fillColor === 'transparent'}
-                                className={`w-10 h-6 bg-transparent border-none cursor-pointer rounded p-1 ${fillColor === 'transparent' ? 'opacity-30' : ''
-                                    }`}
+                                className={`w-10 h-6 bg-transparent border-none cursor-pointer rounded p-1 ${
+                                    fillColor === 'transparent' ? 'opacity-30' : ''
+                                }`}
                             />
                             <button
                                 onClick={() =>
                                     setFillColor(fillColor === 'transparent' ? '#3b82f6' : 'transparent')
                                 }
-                                className={`px-2 py-1 text-[9px] rounded-md font-bold uppercase transition-colors ${fillColor === 'transparent'
+                                className={`px-2 py-1 text-[9px] rounded-md font-bold uppercase transition-colors ${
+                                    fillColor === 'transparent'
                                         ? 'bg-slate-700 text-slate-300'
                                         : 'bg-blue-600 text-white'
-                                    }`}
+                                }`}
                             >
                                 {fillColor === 'transparent' ? 'None' : 'Solid'}
                             </button>
@@ -547,7 +644,6 @@ const Whiteboard = () => {
                 </div>
             </div>
         </div>
-
     );
 };
 

@@ -10,42 +10,81 @@ function RoomPage() {
   const [activeTab, setActiveTab] = useState("members");
   const [micOn, setMicOn] = useState(true);
   const [members, setMembers] = useState([]);
+  const boardRef = useRef(null);
+  const hasJoined = useRef(false);
 
   useEffect(() => {
+    if (!roomId) {
+      navigate("/");
+      return;
+    }
+
     if (!socket.connected) socket.connect();
 
-    socket.emit("joinRoom", { roomId });
+    // Only join once
+    if (!hasJoined.current) {
+      socket.emit("joinRoom", { roomId });
+      hasJoined.current = true;
+    }
 
-    socket.on("roomJoined", ({ roomName, users }) => {
+    const handleRoomJoined = ({ roomName, users, boardData }) => {
+      console.log("Room joined:", { roomName, users, boardData });
+      if (boardData) {
+        boardRef.current = boardData;
+      }
       toast.success(`Joined room: ${roomName}`);
-      setMembers(users); // ✅ initial members
-    });
+      setMembers(users || []); // ✅ initial members
+    };
 
-    socket.on("userJoined", ({ userId, name }) => {
+    const handleUserJoined = ({ userId, name }) => {
+      console.log("User joined:", { userId, name });
       setMembers((prev) => {
         if (prev.some((u) => u.userId === userId)) return prev;
         return [...prev, { userId, name }];
       });
       toast.info(`${name} joined the room`);
-    });
+    };
 
-    socket.on("user-left", ({ userId, name }) => {
+    const handleUserLeft = ({ userId, name }) => {
+      console.log("User left:", { userId, name });
       setMembers((prev) => prev.filter((m) => m.userId !== userId));
       toast.info(`${name} left the room`);
-    });
+    };
 
-    socket.on("room-closed", () => {
+    const handleRoomClosed = () => {
       toast.error("Host left. Room closed.");
+      socket.disconnect();
       navigate("/");
-    });
+    };
+
+    const handleError = ({ msg }) => {
+      toast.error(msg || "An error occurred");
+      navigate("/");
+    };
+
+    socket.on("roomJoined", handleRoomJoined);
+    socket.on("userJoined", handleUserJoined);
+    socket.on("user-left", handleUserLeft);
+    socket.on("room-closed", handleRoomClosed);
+    socket.on("error", handleError);
 
     return () => {
-      socket.off("roomJoined");
-      socket.off("userJoined");
-      socket.off("user-left");
-      socket.off("room-closed");
+      socket.off("roomJoined", handleRoomJoined);
+      socket.off("userJoined", handleUserJoined);
+      socket.off("user-left", handleUserLeft);
+      socket.off("room-closed", handleRoomClosed);
+      socket.off("error", handleError);
     };
   }, [roomId, navigate]);
+
+  const handleLeave = () => {
+    // Disconnect socket properly
+    socket.disconnect();
+    // Reset hasJoined for next time
+    hasJoined.current = false;
+    // Navigate to home
+    navigate("/");
+  };
 
   return (
     <div style={styles.page}>
@@ -73,13 +112,13 @@ function RoomPage() {
               <MicIcon isOn={micOn} />
             </button>
 
-            <button style={styles.leaveBtn} onClick={() => navigate("/")}>
+            <button style={styles.leaveBtn} onClick={handleLeave}>
               Leave
             </button>
           </div>
         </div>
 
-        <Whiteboard roomId={roomId} />
+        <Whiteboard roomId={roomId} initialBoard={boardRef.current} />
       </div>
 
       {/* RIGHT PANEL */}
@@ -89,7 +128,7 @@ function RoomPage() {
             style={activeTab === "members" ? styles.activeTab : styles.tab}
             onClick={() => setActiveTab("members")}
           >
-            Members
+            Members ({members.length})
           </button>
           <button
             style={activeTab === "chat" ? styles.activeTab : styles.tab}
@@ -107,7 +146,7 @@ function RoomPage() {
 
         <div style={styles.tabContent}>
           {activeTab === "members" && <Members members={members} />}
-          {activeTab === "chat" && <ChatBox />}
+          {activeTab === "chat" && <ChatBox roomId={roomId} />}
           {activeTab === "image" && <ImageGenerator />}
         </div>
       </div>
@@ -131,8 +170,8 @@ function MicIcon({ isOn }) {
 function Members({ members }) {
   if (!members || members.length === 0) {
     return (
-      <p style={{ opacity: 0.6, fontSize: "13px" }}>
-        No members in room
+      <p style={{ opacity: 0.6, fontSize: "13px", padding: "10px" }}>
+        No members in room yet...
       </p>
     );
   }
@@ -141,7 +180,12 @@ function Members({ members }) {
     <div>
       {members.map((m) => (
         <div key={m.userId} style={memberStyles.row}>
-          <span>{m.name}</span>
+          <div style={memberStyles.userInfo}>
+            <div style={memberStyles.avatar}>
+              {m.name ? m.name.charAt(0).toUpperCase() : "?"}
+            </div>
+            <span style={memberStyles.name}>{m.name || "Anonymous"}</span>
+          </div>
 
           <div style={memberStyles.actions}>
             <button style={styles.voiceBtn} title="Mic">
@@ -158,26 +202,43 @@ function Members({ members }) {
   );
 }
 
-function ChatBox() {
+function ChatBox({ roomId }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const messagesEndRef = useRef(null);
 
+  useEffect(() => {
+    // Listen for chat messages from server
+    const handleChatMessage = (message) => {
+      setMessages((prev) => [...prev, message]);
+    };
+
+    socket.on("chat:message", handleChatMessage);
+
+    return () => {
+      socket.off("chat:message", handleChatMessage);
+    };
+  }, []);
+
   const sendMessage = () => {
     if (!input.trim()) return;
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        user: "You",
-        text: input,
-        time: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      },
-    ]);
+    const message = {
+      id: Date.now(),
+      user: "You",
+      text: input,
+      time: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+
+    // Add to local state
+    setMessages((prev) => [...prev, message]);
+
+    // Emit to server (if you want to sync chat)
+    socket.emit("chat:message", { roomId, message });
+
     setInput("");
   };
 
@@ -188,13 +249,19 @@ function ChatBox() {
   return (
     <div style={chatStyles.wrapper}>
       <div style={chatStyles.messages}>
-        {messages.map((m) => (
-          <div key={m.id} style={chatStyles.messageCard}>
-            <div style={chatStyles.userName}>{m.user}</div>
-            <div style={chatStyles.messageText}>{m.text}</div>
-            <div style={chatStyles.time}>{m.time}</div>
-          </div>
-        ))}
+        {messages.length === 0 ? (
+          <p style={{ opacity: 0.5, fontSize: "13px", textAlign: "center", marginTop: "20px" }}>
+            No messages yet. Start the conversation!
+          </p>
+        ) : (
+          messages.map((m) => (
+            <div key={m.id} style={chatStyles.messageCard}>
+              <div style={chatStyles.userName}>{m.user}</div>
+              <div style={chatStyles.messageText}>{m.text}</div>
+              <div style={chatStyles.time}>{m.time}</div>
+            </div>
+          ))
+        )}
         <div ref={messagesEndRef} />
       </div>
 
@@ -215,7 +282,11 @@ function ChatBox() {
 }
 
 function ImageGenerator() {
-  return <div>Image Generator UI Here</div>;
+  return (
+    <div style={{ padding: "20px", textAlign: "center", opacity: 0.6 }}>
+      <p>Image Generator UI Coming Soon...</p>
+    </div>
+  );
 }
 
 //////////////// STYLES //////////////////
@@ -243,10 +314,11 @@ const styles = {
     justifyContent: "space-between",
     padding: "10px 14px",
     borderBottom: "1px solid rgba(255,255,255,0.2)",
+    flexShrink: 0,
   },
 
   roomIdBox: { display: "flex", alignItems: "center", gap: "6px" },
-  roomText: { fontWeight: "600" },
+  roomText: { fontWeight: "600", fontSize: "14px" },
 
   copyIcon: {
     border: "1px solid rgba(255,255,255,0.4)",
@@ -254,6 +326,7 @@ const styles = {
     borderRadius: "6px",
     padding: "3px 6px",
     cursor: "pointer",
+    transition: "all 0.2s",
   },
 
   headerActions: { display: "flex", gap: "8px" },
@@ -264,6 +337,7 @@ const styles = {
     borderRadius: "6px",
     padding: "6px 12px",
     cursor: "pointer",
+    transition: "all 0.2s",
   },
 
   voiceBtnOff: {
@@ -272,6 +346,7 @@ const styles = {
     borderRadius: "6px",
     padding: "6px 12px",
     cursor: "pointer",
+    transition: "all 0.2s",
   },
 
   drawBtn: {
@@ -280,6 +355,8 @@ const styles = {
     borderRadius: "6px",
     padding: "6px 10px",
     cursor: "pointer",
+    fontSize: "14px",
+    transition: "all 0.2s",
   },
 
   micSlash: {
@@ -298,6 +375,9 @@ const styles = {
     padding: "6px 12px",
     color: "white",
     cursor: "pointer",
+    fontWeight: "600",
+    transition: "all 0.2s",
+    fontSize: "14px",
   },
 
   rightPanel: {
@@ -315,6 +395,7 @@ const styles = {
     display: "flex",
     gap: "6px",
     padding: "10px",
+    flexShrink: 0,
   },
 
   tab: {
@@ -324,6 +405,8 @@ const styles = {
     borderRadius: "8px",
     border: "1px solid #0c0d0dff",
     cursor: "pointer",
+    fontSize: "12px",
+    transition: "all 0.2s",
   },
 
   activeTab: {
@@ -333,12 +416,15 @@ const styles = {
     color: "#020817",
     borderRadius: "8px",
     fontWeight: "600",
+    fontSize: "12px",
+    border: "none",
+    cursor: "pointer",
   },
 
   tabContent: {
     flex: 1,
     padding: "12px",
-    overflow: "hidden",
+    overflow: "auto",
   },
 };
 
@@ -355,6 +441,7 @@ const chatStyles = {
     display: "flex",
     flexDirection: "column",
     gap: "10px",
+    paddingRight: "5px",
   },
 
   messageCard: {
@@ -365,8 +452,18 @@ const chatStyles = {
     position: "relative",
   },
 
-  userName: { fontWeight: "600", fontSize: "13px" },
-  messageText: { marginBottom: "6px" },
+  userName: { 
+    fontWeight: "600", 
+    fontSize: "13px",
+    marginBottom: "4px",
+    color: "#60a5fa",
+  },
+  
+  messageText: { 
+    marginBottom: "6px",
+    fontSize: "14px",
+    lineHeight: "1.4",
+  },
 
   time: {
     fontSize: "11px",
@@ -380,7 +477,8 @@ const chatStyles = {
     display: "flex",
     gap: "6px",
     borderTop: "1px solid rgba(255,255,255,0.2)",
-    paddingTop: "5px",
+    paddingTop: "10px",
+    marginTop: "10px",
     flexShrink: 0,
   },
 
@@ -391,6 +489,8 @@ const chatStyles = {
     border: "1px solid rgba(255,255,255,0.3)",
     background: "rgba(255,255,255,0.05)",
     color: "white",
+    fontSize: "14px",
+    outline: "none",
   },
 
   sendBtn: {
@@ -400,6 +500,8 @@ const chatStyles = {
     borderRadius: "8px",
     border: "none",
     cursor: "pointer",
+    fontSize: "16px",
+    transition: "all 0.2s",
   },
 };
 
@@ -408,8 +510,33 @@ const memberStyles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "8px",
-    borderBottom: "1px solid rgba(255,255,255,0.15)",
+    padding: "12px 8px",
+    borderBottom: "1px solid rgba(255,255,255,0.1)",
+    transition: "background 0.2s",
+  },
+
+  userInfo: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+  },
+
+  avatar: {
+    width: "32px",
+    height: "32px",
+    borderRadius: "50%",
+    background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: "700",
+    fontSize: "14px",
+    color: "white",
+  },
+
+  name: {
+    fontSize: "14px",
+    fontWeight: "500",
   },
 
   actions: {

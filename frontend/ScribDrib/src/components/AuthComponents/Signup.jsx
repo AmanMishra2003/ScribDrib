@@ -62,12 +62,10 @@ export default function Signup() {
 
     const newErrors = validateForm(); //validate form client side error
 
-    setRunningLoader(true);
-
     if (Object.keys(newErrors).length === 0) {
 
       try {
-
+          setRunningLoader(true);
         const { data } = await api.post('/auth/signup', formData); //post API call
 
         //storing token and detail in localStorage
@@ -81,8 +79,9 @@ export default function Signup() {
       } catch (err) {
 
         //error toast from server
-        toast.error(err?.response?.data?.msg || "Something Went Wrong!!");
         console.log(err);
+        toast.error(err?.response?.data?.msg || "Something Went Wrong!!");
+         setRunningLoader(false);
 
       }
 

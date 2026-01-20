@@ -126,7 +126,7 @@ function RoomOptions() {
     socket.once("error", (msg) => {
       toast.error(msg);
       console.log(msg);
-      alert(msg);
+      // alert(msg);
     });
   };
 
