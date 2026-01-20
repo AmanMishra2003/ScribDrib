@@ -33,7 +33,7 @@ router.post('/signup', async(req,res,next)=>{
         
         //sign JWT
         const token = await jwt.sign({id: newUser._id}, process.env.JWTSECRET,{expiresIn:'1d'});
-console.log(token)
+        if(!token)throw Error("there is no token made!!");
         res.status(200).json({
             token,
             data:{
