@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { socket } from "../../Socket/ws";
 import { toast } from "react-toastify";
@@ -12,12 +12,17 @@ function RoomPage() {
 
   useEffect(() => {
     if (!socket.connected) socket.connect();
-
     socket.emit("join-room", { roomId });
 
-    socket.on("room-joined", ({ roomName }) => toast.success(`Joined room: ${roomName}`));
-    socket.on("user-joined", ({ name }) => toast.info(`${name} joined the room`));
-    socket.on("user-left", ({ name }) => toast.info(`${name} left the room`));
+    socket.on("room-joined", ({ roomName }) =>
+      toast.success(`Joined room: ${roomName}`)
+    );
+    socket.on("user-joined", ({ name }) =>
+      toast.info(`${name} joined the room`)
+    );
+    socket.on("user-left", ({ name }) =>
+      toast.info(`${name} left the room`)
+    );
     socket.on("room-closed", () => {
       toast.error("Host left. Room closed.");
       navigate("/");
@@ -33,19 +38,19 @@ function RoomPage() {
 
   return (
     <div style={styles.page}>
+      {/* LEFT – WHITEBOARD */}
       <div style={styles.boardArea}>
         <div style={styles.roomHeader}>
           <div style={styles.roomIdBox}>
             <span style={styles.roomText}>Room ID: {roomId}</span>
             <button
               style={styles.copyIcon}
-              title="Copy Room ID"
               onClick={() => {
-                navigator.clipboard.writeText(roomId)
-                toast.success('Copy to Clipboard');
+                navigator.clipboard.writeText(roomId);
+                toast.success("Copied to clipboard");
               }}
             >
-              copy
+              📋
             </button>
           </div>
 
@@ -54,10 +59,7 @@ function RoomPage() {
               style={micOn ? styles.voiceBtn : styles.voiceBtnOff}
               onClick={() => setMicOn(!micOn)}
             >
-              <span style={styles.micWrapper}>
-                <span style={styles.micIcon}>🎙️</span>
-                {!micOn && <span style={styles.micSlash}>/</span>}
-              </span>
+              <MicIcon isOn={micOn} />
             </button>
 
             <button style={styles.leaveBtn} onClick={() => navigate("/")}>
@@ -66,25 +68,28 @@ function RoomPage() {
           </div>
         </div>
 
-        <Whiteboard/>
-
-        {/* <div style={styles.boardBody}>
-          <h2>Whiteboard Area</h2>
-          <div style={styles.boardToolbar}>
-            <button style={styles.drawBtn}>🖊️</button>
-          </div>
-        </div> */}
+        <Whiteboard />
       </div>
 
+      {/* RIGHT PANEL */}
       <div style={styles.rightPanel}>
         <div style={styles.tabs}>
-          <button style={activeTab === "members" ? styles.activeTab : styles.tab} onClick={() => setActiveTab("members")}>
+          <button
+            style={activeTab === "members" ? styles.activeTab : styles.tab}
+            onClick={() => setActiveTab("members")}
+          >
             Members
           </button>
-          <button style={activeTab === "chat" ? styles.activeTab : styles.tab} onClick={() => setActiveTab("chat")}>
+          <button
+            style={activeTab === "chat" ? styles.activeTab : styles.tab}
+            onClick={() => setActiveTab("chat")}
+          >
             ChatBox
           </button>
-          <button style={activeTab === "image" ? styles.activeTab : styles.tab} onClick={() => setActiveTab("image")}>
+          <button
+            style={activeTab === "image" ? styles.activeTab : styles.tab}
+            onClick={() => setActiveTab("image")}
+          >
             Image Generation
           </button>
         </div>
@@ -101,16 +106,104 @@ function RoomPage() {
 
 export default RoomPage;
 
-//  COMPONENTS 
+//////////////// COMPONENTS //////////////////
+
+function MicIcon({ isOn }) {
+  return (
+    <span style={{ position: "relative", display: "inline-block" }}>
+      <span style={{ fontSize: "16px" }}>🎙️</span>
+      {!isOn && <span style={styles.micSlash}>/</span>}
+    </span>
+  );
+}
+
 function Members() {
-  return <div>Room Members Here</div>;
+  const [members, setMembers] = useState([
+    { id: 1, name: "Ayush", micOn: true },
+    { id: 2, name: "Aman", micOn: false },
+    { id: 3, name: "Riya", micOn: true },
+  ]);
+
+  return (
+    <div>
+      {members.map((m) => (
+        <div key={m.id} style={memberStyles.row}>
+          <span>{m.name}</span>
+          <button style={m.micOn ? styles.voiceBtn : styles.voiceBtnOff}>
+            <MicIcon isOn={m.micOn} />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
 }
+
 function ChatBox() {
-  return <div>Chat Messages Here</div>;
+  const [messages, setMessages] = useState([
+    { id: 1, user: "Ayush", text: "Hey!", time: "12:30 PM" },
+    { id: 2, user: "Aman", text: "Looks good", time: "12:31 PM" },
+  ]);
+
+  const [input, setInput] = useState("");
+  const messagesEndRef = useRef(null);
+
+  const sendMessage = () => {
+    if (!input.trim()) return;
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        user: "You",
+        text: input,
+        time: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      },
+    ]);
+    setInput("");
+  };
+
+  //AUTO SCROLL TO BOTTOM
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  return (
+    <div style={chatStyles.wrapper}>
+      <div style={chatStyles.messages}>
+        {messages.map((m) => (
+          <div key={m.id} style={chatStyles.messageCard}>
+            <div style={chatStyles.userName}>{m.user}</div>
+            <div style={chatStyles.messageText}>{m.text}</div>
+            <div style={chatStyles.time}>{m.time}</div>
+          </div>
+        ))}
+        <div ref={messagesEndRef} />
+      </div>
+
+      <div style={chatStyles.inputBox}>
+        <input
+          style={chatStyles.input}
+          value={input}
+          placeholder="Type a message..."
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+        />
+        <button style={chatStyles.sendBtn} onClick={sendMessage}>
+          ➤
+        </button>
+      </div>
+    </div>
+  );
 }
+
 function ImageGenerator() {
   return <div>Image Generator UI Here</div>;
 }
+
+//////////////// STYLES //////////////////
 
 const styles = {
   page: {
@@ -133,52 +226,39 @@ const styles = {
   roomHeader: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
+    padding: "10px 14px",
     borderBottom: "1px solid rgba(255,255,255,0.2)",
-    background: "rgba(255,255,255,0.03)",
   },
 
-  roomIdBox: {
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-  },
-
-  roomText: { color: "#e5e7eb", fontWeight: "600" },
+  roomIdBox: { display: "flex", alignItems: "center", gap: "6px" },
+  roomText: { fontWeight: "600" },
 
   copyIcon: {
     border: "1px solid rgba(255,255,255,0.4)",
     background: "rgba(255,255,255,0.05)",
-    color: "#e5e7eb",
-    cursor: "pointer",
-    fontSize: "13px",
-    padding: "3px 6px",
     borderRadius: "6px",
-    boxShadow: "0 0 6px rgba(255,255,255,0.25)",
+    padding: "3px 6px",
+    cursor: "pointer",
   },
 
   headerActions: { display: "flex", gap: "8px" },
 
   voiceBtn: {
-    padding: "6px 12px",
-    borderRadius: "6px",
     border: "1px solid rgba(255,255,255,0.4)",
     background: "rgba(255,255,255,0.1)",
-    color: "white",
+    borderRadius: "6px",
+    padding: "6px 12px",
     cursor: "pointer",
   },
 
   voiceBtnOff: {
-    padding: "6px 12px",
-    borderRadius: "6px",
     border: "1px solid rgba(255,0,0,0.6)",
     background: "rgba(255,0,0,0.15)",
-    color: "white",
+    borderRadius: "6px",
+    padding: "6px 12px",
     cursor: "pointer",
   },
 
-  micWrapper: { position: "relative", display: "inline-block" },
-  micIcon: { fontSize: "16px" },
   micSlash: {
     position: "absolute",
     top: "-2px",
@@ -189,13 +269,12 @@ const styles = {
   },
 
   leaveBtn: {
-    padding: "6px 12px",
-    borderRadius: "6px",
-    border: "none",
     background: "linear-gradient(135deg,#ef4444,#dc2626)",
+    border: "none",
+    borderRadius: "6px",
+    padding: "6px 12px",
     color: "white",
     cursor: "pointer",
-    fontWeight: "600",
   },
 
   rightPanel: {
@@ -205,6 +284,7 @@ const styles = {
     borderRadius: "14px",
     display: "flex",
     flexDirection: "column",
+    height: "calc(100vh - 20px)",
     overflow: "hidden",
   },
 
@@ -212,18 +292,15 @@ const styles = {
     display: "flex",
     gap: "6px",
     padding: "10px",
-    borderBottom: "1px solid rgba(255,255,255,0.25)",
   },
 
   tab: {
     flex: 1,
     padding: "8px",
     background: "#020817",
-    color: "#94a3b8",
-    border: "1px solid #0c0d0dff",
     borderRadius: "8px",
+    border: "1px solid #0c0d0dff",
     cursor: "pointer",
-    fontSize: "13px",
   },
 
   activeTab: {
@@ -233,12 +310,81 @@ const styles = {
     color: "#020817",
     borderRadius: "8px",
     fontWeight: "600",
-    fontSize: "13px",
   },
 
   tabContent: {
     flex: 1,
     padding: "12px",
+    overflow: "hidden",
+  },
+};
+
+const chatStyles = {
+  wrapper: {
+    display: "flex",
+    flexDirection: "column",
+    height: "100%",
+  },
+
+  messages: {
+    flex: 1,
     overflowY: "auto",
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+  },
+
+  messageCard: {
+    background: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(255,255,255,0.15)",
+    borderRadius: "10px",
+    padding: "8px 10px 18px 10px",
+    position: "relative",
+  },
+
+  userName: { fontWeight: "600", fontSize: "13px" },
+  messageText: { marginBottom: "6px" },
+
+  time: {
+    fontSize: "11px",
+    color: "#9ca3af",
+    position: "absolute",
+    bottom: "4px",
+    right: "8px",
+  },
+
+  inputBox: {
+    display: "flex",
+    gap: "6px",
+    borderTop: "1px solid rgba(255,255,255,0.2)",
+    paddingTop: "8px",
+    flexShrink: 0,
+  },
+
+  input: {
+    flex: 1,
+    padding: "8px",
+    borderRadius: "8px",
+    border: "1px solid rgba(255,255,255,0.3)",
+    background: "rgba(255,255,255,0.05)",
+    color: "white",
+  },
+
+  sendBtn: {
+    padding: "8px 12px",
+    background: "#2563eb",
+    color: "white",
+    borderRadius: "8px",
+    border: "none",
+    cursor: "pointer",
+  },
+};
+
+const memberStyles = {
+  row: {
+    display: "flex",
+    justifyContent: "space-between",
+    padding: "8px",
+    borderBottom: "1px solid rgba(255,255,255,0.15)",
   },
 };
