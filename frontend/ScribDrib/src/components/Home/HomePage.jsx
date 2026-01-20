@@ -108,7 +108,6 @@ export default function HomePage() {
               Optimized for top-tier performance and responsiveness.
             </p>
           </div>
-
           <div
             className="p-6 bg-slate-800 rounded-2xl shadow hover:shadow-lg transition"
             style={{ padding: "10px" }}
