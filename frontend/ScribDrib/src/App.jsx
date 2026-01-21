@@ -6,7 +6,8 @@ import RoomPage from "./components/roomoptions/RoomPage.jsx";
 
 
 // HomePage
-import HomePage from './components/Home/HomePage'
+import LandingPage from './components/Home/LandingPage';
+
 
 // Auth Components
 import AuthComponent from './components/AuthComponents/AuthComponent'
@@ -34,7 +35,7 @@ function App() {
     <ToastContainer/>
     <Routes>
       {/* Home page */}
-      <Route path='/' element={<HomePage />} />
+     <Route path="/" element={<LandingPage />} />
       <Route path='/demo' element={<Whiteboard/>}/>
       <Route path="/joinRoom" element={<ProtectRoute><RoomOptions /></ProtectRoute>} />
       <Route path="/room/:roomId" element={<ProtectRoute><RoomPage/></ProtectRoute>}/>
