@@ -6,6 +6,7 @@ const { Server } = require('socket.io');
 const { createServer } = require('http');
 const socketAuth = require('./middleware/socketAuth');
 const Room = require('./models/roomModel');
+const Comment = require('./models/comments');
 const { v4: uuidv4 } = require('uuid');
 const watchRoomDelete = require('./middleware/watchRoomDelete');
 
@@ -96,8 +97,12 @@ io.on('connection', (socket) => {
   // ===== JOIN ROOM =====
   socket.on('joinRoom', async ({ roomId }) => {
     try {
-      // Find room
-      const room = await Room.findOne({ roomId, isActive: true });
+      // Find room and populate chat
+      const room = await Room.findOne({ roomId, isActive: true })
+        .populate({
+          path: 'chat',
+          options: { sort: { createdAt: 1 } }
+        }).populate('host');
       
       if (!room) {
         return socket.emit('error', { msg: "Room not found or inactive" });
@@ -138,13 +143,27 @@ io.on('connection', (socket) => {
       // Send room data to joining user
       socket.emit("roomJoined", {
         roomId: room.roomId,
+        host: room.host.fullName,
         roomName: room.roomName,
         boardData: parsedBoard,
         users: room.users.map(u => ({ 
           userId: u.userId, 
           name: u.name 
-        }))
+        })),
+        currentUser: {
+          userId: user._id,
+          name: user.fullName
+        }
       });
+
+      // Send chat history to joining user
+      const chatMessages = room.chat.map(msg => ({
+        text: msg.commentText,
+        userName: msg.userName,
+        userId: msg.userId,
+        createdAt: msg.createdAt
+      }));
+      socket.emit("chat:history", { messages: chatMessages });
 
       // Notify others in room
       socket.to(roomId).emit('userJoined', {
@@ -158,9 +177,11 @@ io.on('connection', (socket) => {
     }
   });
 
-  // ===== BOARD UPDATE =====
+  // ===== BOARD UPDATE ===== - FIXED
   socket.on("board:update", async ({ roomId, boardData }) => {
     try {
+      console.log(`📥 Server received board update from ${user.fullName} for room ${roomId}`);
+      
       const serialized = JSON.stringify(boardData);
 
       await Room.findOneAndUpdate(
@@ -168,20 +189,69 @@ io.on('connection', (socket) => {
         { boardData: serialized }
       );
 
-      // Broadcast to others in room
+      // CRITICAL FIX: Broadcast to OTHERS only (not sender)
       socket.to(roomId).emit("board:update", boardData);
+      
+      console.log(`📤 Server broadcasted board update to room ${roomId} (excluding sender)`);
     } catch (err) {
       console.error("Board update error:", err);
+      socket.emit("error", { msg: "Failed to update board" });
     }
   });
 
-  // ===== CHAT MESSAGE =====
-  socket.on("chat:message", async ({ roomId, message }) => {
+  // ===== REQUEST CHAT HISTORY =====
+  socket.on("chat:requestHistory", async ({ roomId }) => {
     try {
-      // Broadcast message to all users in room except sender
-      socket.to(roomId).emit("chat:message", message);
+      const room = await Room.findOne({ roomId, isActive: true })
+        .populate({
+          path: 'chat',
+          options: { sort: { createdAt: 1 } }
+        });
+
+      if (!room) return;
+
+      const chatMessages = room.chat.map(msg => ({
+        text: msg.commentText,
+        userName: msg.userName,
+        userId: msg.userId,
+        createdAt: msg.createdAt
+      }));
+
+      socket.emit("chat:history", { messages: chatMessages });
     } catch (err) {
-      console.error("Chat message error:", err);
+      console.error("Chat history error:", err);
+    }
+  });
+
+  // ===== CHAT SEND =====
+  socket.on("chat:send", async ({ roomId, message }) => {
+    try {
+      const room = await Room.findOne({ roomId, isActive: true });
+      if (!room) return;
+
+      // Create comment in database
+      const newComment = await Comment.create({
+        roomId: room._id,
+        userId: user._id,
+        commentText: message.text,
+        userName: message.userName
+      });
+
+      // Add to room's chat array
+      room.chat.push(newComment._id);
+      await room.save();
+
+      // Broadcast to ALL users including sender
+      const messageData = {
+        text: newComment.commentText,
+        userName: newComment.userName,
+        userId: newComment.userId,
+        createdAt: newComment.createdAt
+      };
+
+      io.to(roomId).emit("chat:message", messageData);
+    } catch (err) {
+      console.error("Chat send error:", err);
     }
   });
 
