@@ -59,7 +59,7 @@ const Whiteboard = ({ roomId, initialBoard }) => {
     const currentShape = useRef(null);
     const startPoint = useRef({ x: 0, y: 0 });
 
-    // Debounced save state with immediate local update
+    // Save state and emit to server
     const saveState = (immediate = false) => {
         if (!fabricCanvas.current || isStateChanging.current) return;
 
@@ -73,18 +73,19 @@ const Whiteboard = ({ roomId, initialBoard }) => {
             setCanUndo(undoStack.current.length > 1);
             setCanRedo(false);
 
-            // Clear existing timeout
             if (saveTimeout.current) {
                 clearTimeout(saveTimeout.current);
             }
 
-            // Debounce socket emit unless immediate
-            if (immediate) {
+            const emitUpdate = () => {
+                console.log("📤 Sending board update:", { objectCount: json?.objects?.length || 0 });
                 socket.emit("board:update", { roomId, boardData: json });
+            };
+
+            if (immediate) {
+                emitUpdate();
             } else {
-                saveTimeout.current = setTimeout(() => {
-                    socket.emit("board:update", { roomId, boardData: json });
-                }, 300); // 300ms debounce
+                saveTimeout.current = setTimeout(emitUpdate, 100);
             }
         }
     };
@@ -105,17 +106,35 @@ const Whiteboard = ({ roomId, initialBoard }) => {
         });
     }, [initialBoard]);
 
-    // Socket.io board updates
+    // Socket.io board updates - FIXED
     useEffect(() => {
         if (!fabricCanvas.current) return;
 
         const handleBoardUpdate = (boardData) => {
             if (!boardData) return;
             
+            console.log("📥 Received board update:", { objectCount: boardData?.objects?.length || 0 });
+            
+            // Prevent processing if it's the same state
+            const currentState = JSON.stringify(fabricCanvas.current.toJSON());
+            const incomingState = JSON.stringify(boardData);
+            
+            if (currentState === incomingState) {
+                console.log("⏭️ Skipping identical state");
+                return;
+            }
+            
             isStateChanging.current = true;
             fabricCanvas.current.loadFromJSON(boardData, () => {
                 fabricCanvas.current.renderAll();
                 isStateChanging.current = false;
+                
+                // Update undo stack
+                const serialized = JSON.stringify(boardData);
+                if (undoStack.current[undoStack.current.length - 1] !== serialized) {
+                    undoStack.current.push(serialized);
+                    if (undoStack.current.length > 50) undoStack.current.shift();
+                }
             });
         };
 
@@ -156,16 +175,15 @@ const Whiteboard = ({ roomId, initialBoard }) => {
 
         window.addEventListener("resize", handleResize);
 
-        // Event Listeners - debounced saves
+        // Event Listeners
         const handleObjectAdded = () => !isStateChanging.current && saveState();
-        const handleObjectModified = () => !isStateChanging.current && saveState(true); // Immediate for modifications
+        const handleObjectModified = () => !isStateChanging.current && saveState(true);
         const handleObjectRemoved = () => !isStateChanging.current && saveState(true);
 
         canvas.on("object:added", handleObjectAdded);
         canvas.on("object:modified", handleObjectModified);
         canvas.on("object:removed", handleObjectRemoved);
 
-        // Real-time object updates during manipulation
         canvas.on("object:moving", () => canvas.requestRenderAll());
         canvas.on("object:scaling", () => canvas.requestRenderAll());
         canvas.on("object:rotating", () => canvas.requestRenderAll());
@@ -242,13 +260,12 @@ const Whiteboard = ({ roomId, initialBoard }) => {
         canvas.requestRenderAll();
     }, [activeTool, strokeColor, strokeWidth]);
 
-    // Handle color/stroke changes for selection - INSTANT UPDATE
+    // Handle color/stroke changes for selection
     useEffect(() => {
         const canvas = fabricCanvas.current;
         if (!canvas) return;
         const activeObjects = canvas.getActiveObjects();
         if (activeObjects.length > 0) {
-            // Disable events temporarily for smooth update
             isStateChanging.current = true;
             
             activeObjects.forEach((obj) => {
@@ -268,8 +285,6 @@ const Whiteboard = ({ roomId, initialBoard }) => {
             
             canvas.requestRenderAll();
             isStateChanging.current = false;
-            
-            // Save after render
             saveState(true);
         }
     }, [strokeColor, fillColor, strokeWidth]);
@@ -321,7 +336,7 @@ const Whiteboard = ({ roomId, initialBoard }) => {
             selectable: false,
             evented: false,
             strokeUniform: true,
-            objectCaching: false, // Disable caching for smooth updates
+            objectCaching: false,
         };
 
         switch (tool) {
@@ -363,7 +378,6 @@ const Whiteboard = ({ roomId, initialBoard }) => {
         const pointer = canvas.getPointer(opt.e);
         const shape = currentShape.current;
 
-        // Batch updates for smoother rendering
         canvas.discardActiveObject();
         
         switch (tool) {
@@ -413,13 +427,13 @@ const Whiteboard = ({ roomId, initialBoard }) => {
                 currentShape.current.set({ 
                     selectable: true, 
                     evented: true,
-                    objectCaching: true, // Re-enable caching after creation
+                    objectCaching: true,
                 });
                 currentShape.current.setCoords();
             }
             currentShape.current = null;
             canvas.renderAll();
-            saveState(true); // Immediate save on mouse up
+            saveState(true);
         }
     };
 
