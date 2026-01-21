@@ -10,8 +10,11 @@ function RoomPage() {
   const [activeTab, setActiveTab] = useState("members");
   const [micOn, setMicOn] = useState(true);
   const [members, setMembers] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
   const boardRef = useRef(null);
   const hasJoined = useRef(false);
+  const [hostName, setHostName] = useState("");
+  // const host = useRef(null);
 
   useEffect(() => {
     if (!roomId) {
@@ -19,21 +22,39 @@ function RoomPage() {
       return;
     }
 
-    if (!socket.connected) socket.connect();
-
-    // Only join once
-    if (!hasJoined.current) {
-      socket.emit("joinRoom", { roomId });
-      hasJoined.current = true;
+    // Connect socket immediately if not connected
+    if (!socket.connected) {
+      socket.connect();
     }
 
-    const handleRoomJoined = ({ roomName, users, boardData }) => {
+    // Wait for connection before joining
+    const attemptJoin = () => {
+      if (socket.connected && !hasJoined.current) {
+        socket.emit("joinRoom", { roomId });
+        hasJoined.current = true;
+      }
+    };
+
+    if (socket.connected) {
+      attemptJoin();
+    } else {
+      socket.on("connect", attemptJoin);
+    }
+
+    const handleRoomJoined = ({ roomName, users, boardData, currentUser: user, host }) => {
       console.log("Room joined:", { roomName, users, boardData });
       if (boardData) {
         boardRef.current = boardData;
       }
+      if (user) {
+        setCurrentUser(user);
+      }
+      if(host){
+        setHostName(host);
+      }
+
       toast.success(`Joined room: ${roomName}`);
-      setMembers(users || []); // ✅ initial members
+      setMembers(users || []);
     };
 
     const handleUserJoined = ({ userId, name }) => {
@@ -69,6 +90,7 @@ function RoomPage() {
     socket.on("error", handleError);
 
     return () => {
+      socket.off("connect", attemptJoin);
       socket.off("roomJoined", handleRoomJoined);
       socket.off("userJoined", handleUserJoined);
       socket.off("user-left", handleUserLeft);
@@ -78,11 +100,8 @@ function RoomPage() {
   }, [roomId, navigate]);
 
   const handleLeave = () => {
-    // Disconnect socket properly
     socket.disconnect();
-    // Reset hasJoined for next time
     hasJoined.current = false;
-    // Navigate to home
     navigate("/");
   };
 
@@ -105,6 +124,7 @@ function RoomPage() {
           </div>
 
           <div style={styles.headerActions}>
+            <p>Host Name: {hostName}</p>
             <button
               style={micOn ? styles.voiceBtn : styles.voiceBtnOff}
               onClick={() => setMicOn(!micOn)}
@@ -145,8 +165,8 @@ function RoomPage() {
         </div>
 
         <div style={styles.tabContent}>
-          {activeTab === "members" && <Members members={members} />}
-          {activeTab === "chat" && <ChatBox roomId={roomId} />}
+          {activeTab === "members" && <Members members={members}  />}
+          {activeTab === "chat" && <ChatBox roomId={roomId} currentUser={currentUser} />}
           {activeTab === "image" && <ImageGenerator />}
         </div>
       </div>
@@ -167,7 +187,7 @@ function MicIcon({ isOn }) {
   );
 }
 
-function Members({ members }) {
+function Members({ members, user }) {
   if (!members || members.length === 0) {
     return (
       <p style={{ opacity: 0.6, fontSize: "13px", padding: "10px" }}>
@@ -202,42 +222,49 @@ function Members({ members }) {
   );
 }
 
-function ChatBox({ roomId }) {
+function ChatBox({ roomId, currentUser }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const messagesEndRef = useRef(null);
+  const hasLoadedHistory = useRef(false);
 
   useEffect(() => {
-    // Listen for chat messages from server
+    // Load chat history when component mounts
+    const loadChatHistory = ({ messages: chatHistory }) => {
+      if (!hasLoadedHistory.current) {
+        setMessages(chatHistory || []);
+        hasLoadedHistory.current = true;
+      }
+    };
+
+    // Listen for new chat messages from server
     const handleChatMessage = (message) => {
       setMessages((prev) => [...prev, message]);
     };
 
+    socket.on("chat:history", loadChatHistory);
     socket.on("chat:message", handleChatMessage);
 
+    // Request chat history
+    socket.emit("chat:requestHistory", { roomId });
+
     return () => {
+      socket.off("chat:history", loadChatHistory);
       socket.off("chat:message", handleChatMessage);
     };
-  }, []);
+  }, [roomId]);
 
   const sendMessage = () => {
-    if (!input.trim()) return;
+    if (!input.trim() || !currentUser) return;
 
     const message = {
-      id: Date.now(),
-      user: "You",
       text: input,
-      time: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+      userName: currentUser.name,
+      userId: currentUser.userId,
     };
 
-    // Add to local state
-    setMessages((prev) => [...prev, message]);
-
-    // Emit to server (if you want to sync chat)
-    socket.emit("chat:message", { roomId, message });
+    // Emit to server (server will broadcast to all including sender)
+    socket.emit("chat:send", { roomId, message });
 
     setInput("");
   };
@@ -254,11 +281,16 @@ function ChatBox({ roomId }) {
             No messages yet. Start the conversation!
           </p>
         ) : (
-          messages.map((m) => (
-            <div key={m.id} style={chatStyles.messageCard}>
-              <div style={chatStyles.userName}>{m.user}</div>
+          messages.map((m, idx) => (
+            <div key={idx} style={chatStyles.messageCard}>
+              <div style={chatStyles.userName}>{m.userName}</div>
               <div style={chatStyles.messageText}>{m.text}</div>
-              <div style={chatStyles.time}>{m.time}</div>
+              <div style={chatStyles.time}>
+                {new Date(m.createdAt).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </div>
             </div>
           ))
         )}
@@ -433,6 +465,7 @@ const chatStyles = {
     display: "flex",
     flexDirection: "column",
     height: "100%",
+    maxHeight: "100%",
   },
 
   messages: {
@@ -442,6 +475,8 @@ const chatStyles = {
     flexDirection: "column",
     gap: "10px",
     paddingRight: "5px",
+    marginBottom: "10px",
+    minHeight: 0,
   },
 
   messageCard: {
@@ -450,6 +485,7 @@ const chatStyles = {
     borderRadius: "10px",
     padding: "8px 10px 18px 10px",
     position: "relative",
+    flexShrink: 0,
   },
 
   userName: { 
@@ -463,6 +499,7 @@ const chatStyles = {
     marginBottom: "6px",
     fontSize: "14px",
     lineHeight: "1.4",
+    wordWrap: "break-word",
   },
 
   time: {
@@ -478,7 +515,6 @@ const chatStyles = {
     gap: "6px",
     borderTop: "1px solid rgba(255,255,255,0.2)",
     paddingTop: "10px",
-    marginTop: "10px",
     flexShrink: 0,
   },
 
