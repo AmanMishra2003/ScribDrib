@@ -12,6 +12,10 @@ const CommentSchema = new Schema({
         ref:"authSchema",
         required:true
     },
+    userName:{
+        type:String,
+        required:true
+    },
     commentText:{
         type:String,
         required:true
