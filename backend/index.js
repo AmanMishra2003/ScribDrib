@@ -7,6 +7,7 @@ const { createServer } = require('http');
 const socketAuth = require('./middleware/socketAuth');
 const Room = require('./models/roomModel');
 const { v4: uuidv4 } = require('uuid');
+const watchRoomDelete = require('./middleware/watchRoomDelete');
 
 const app = express();
 const port = 3000;
@@ -21,7 +22,7 @@ app.use(express.json());
 // Database connection
 const mongodbPath = process.env.DATABASEURL
 mongoose.connect(mongodbPath).then(() => {
-  console.log("connection successfull!")
+  watchRoomDelete();
 }).catch((err) => {
   console.log(err)
 })
