@@ -40,6 +40,17 @@ const RoomSchema = new Schema({
     isActive: {
         type: Boolean,
         default: true
+    },
+    chat:[
+        {
+            type:Schema.Types.ObjectId,
+            ref:"Comment"
+        }
+    ],
+    expiredAt: {
+        type: Date,
+        default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        index: { expires: 0 }
     }
 }, {
   timestamps: true   // ✅ adds createdAt & updatedAt
