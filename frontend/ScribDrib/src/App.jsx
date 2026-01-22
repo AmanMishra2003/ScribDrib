@@ -3,6 +3,7 @@ import { Routes, Route,Navigate } from 'react-router-dom'
 import { ToastContainer } from 'react-toastify';
 import RoomOptions from "./components/roomoptions/roomOptions.jsx";
 import RoomPage from "./components/roomoptions/RoomPage.jsx";
+import HistoryPage from "./components/HistoryPage/HistoryPage.jsx";
 
 
 // HomePage
@@ -39,6 +40,8 @@ function App() {
       <Route path='/demo' element={<Whiteboard/>}/>
       <Route path="/joinRoom" element={<ProtectRoute><RoomOptions /></ProtectRoute>} />
       <Route path="/room/:roomId" element={<ProtectRoute><RoomPage/></ProtectRoute>}/>
+      <Route path="/history" element={<ProtectRoute><HistoryPage /></ProtectRoute>}
+  />
       {/* Auth layout */}
       <Route path='/auth' element={<AuthComponent />}>
         <Route path='login' element={<Login />} />
