@@ -121,6 +121,15 @@ function RoomPage() {
             >
               📋
             </button>
+            <button
+              style={styles.copyIcon}
+              onClick={() => {
+                navigator.clipboard.writeText(`${window.location.origin}/joinRoom?rid=${roomId}`);
+                toast.success("Link to clipboard");
+              }}
+            >
+              🔗
+            </button>
           </div>
 
           <div style={styles.headerActions}>

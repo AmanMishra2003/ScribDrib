@@ -15,6 +15,8 @@ const styles = {
   },
   container: {
     display: "flex",
+    flexWrap: "wrap",
+    justifyContent: "center",
     gap: "70px",
   },
   box: {
@@ -63,13 +65,15 @@ const styles = {
   },
 };
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { socket } from "../../Socket/ws";
 import { toast } from "react-toastify";
 
 function RoomOptions() {
   const [roomName, setRoomName] = useState("");
-  const [roomId, setRoomId] = useState("");
+  const [searchParam, setSearchParam] = useSearchParams();
+  const [roomId, setRoomId] = useState(searchParam.get("rid") || "");
+  const [joining ,setJoining] = useState(false);
   const navigate = useNavigate();
 
   // Cleanup socket listeners
@@ -101,7 +105,11 @@ function RoomOptions() {
     socket.emit("createRoom", { roomName });
 
     socket.once("roomCreated", ({ roomId }) => {
-      navigate(`/room/${roomId}`);
+      setJoining(true);
+
+      setTimeout(() => {
+           navigate(`/room/${roomId}`);
+      }, 300);
     });
 
     socket.once("error", (msg) => {
@@ -119,8 +127,11 @@ function RoomOptions() {
     socket.emit("joinRoom", { roomId });
 
     socket.once("roomJoined", ({ roomId,  }) => {
-      // console.log("Joined Room:", { roomId, users });
-      navigate(`/room/${roomId}`);
+      setJoining(true);
+
+      setTimeout(() => {
+           navigate(`/room/${roomId}`);
+      }, 300);
     });
 
     socket.once("error", (msg) => {
@@ -131,6 +142,25 @@ function RoomOptions() {
   };
 
   return (
+    joining ?  
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "rgba(0,0,0,0.6)",
+        color: "#fff",
+        fontSize: "24px",
+        opacity: joining ? 1 : 0,
+        pointerEvents: joining ? "auto" : "none",
+        transition: "opacity 0.3s ease-in-out",
+        zIndex: 10
+      }}
+    >
+      Joining room...
+    </div> : 
     <div style={styles.page}>
       <h1 style={styles.heading}>Start a Session 🚀</h1>
 
@@ -162,7 +192,8 @@ function RoomOptions() {
         </div>
       </div>
     </div>
-  );
+    
+  )
 }
 
 export default RoomOptions;

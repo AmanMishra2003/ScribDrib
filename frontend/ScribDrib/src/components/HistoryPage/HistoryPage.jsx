@@ -2,33 +2,32 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, Play, Calendar, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "./HistoryPage.css";
+import api from "../../API/axios";
+import { toast } from "react-toastify";
 
 export default function HistoryPage() {
   const navigate = useNavigate();
-  const [history, setHistory] = useState([]);
+  const [historyMine, setHistoryMine] = useState([]);
+  const [historyJoined, setHistoryJoined] = useState([]);
+  const [createdHistory, setCreatedHistory] = useState(true);
   
 
   useEffect(() => {
-    setHistory([
-      {
-        id: 1,
-        roomName: "Design Brainstorm",
-        createdBy: "Ayush",
-        date: "10 Jan 2026",
-      },
-      {
-        id: 2,
-        roomName: "Math Whiteboard",
-        createdBy: "Aman",
-        date: "08 Jan 2026",
-      },
-      {
-        id: 3,
-        roomName: "System Design",
-        createdBy: "Ayush",
-        date: "05 Jan 2026",
-      },
-    ]);
+
+    //get request to fetch joined history
+    const fetchJoinedHistory = async () => {
+      try{
+        const {data} = await api.get('/history');
+        setHistoryJoined(data.roomsJoined);
+        setHistoryMine(data.roomsCreated);
+      }catch(err){
+        toast.error("Error fetching history data");
+        console.error("Error fetching history data:", err);
+      }
+    }
+
+    fetchJoinedHistory();
+
   }, []);
 
   const handleBackToHome = () => {
@@ -58,9 +57,25 @@ export default function HistoryPage() {
             <p className="history-subtitle">View and manage your whiteboard sessions</p>
           </div>
 
-          {/* History Cards */}
-          <div className="history-cards-container">
-            {history.map((room) => (
+          <div className="flex gap-4" style={{padding:"20px 30px"}}>
+            <button
+              className={`relative after:content-[''] after:absolute after:left-0 after:bottom-0  after:h-1 after:bg-purple-700  after:transition-all after:duration-300 after:delay-150  ${createdHistory ? 'after:w-full' : 'after:w-0'} `}  style={{padding:"10px 30px"}}
+              onClick={() => setCreatedHistory(true)}
+            >
+              Created by Me
+            </button>
+            <button
+              className={`relative after:content-[''] after:absolute after:left-0 after:bottom-0  after:h-1 after:bg-purple-700  after:transition-all after:duration-300 after:delay-150  ${!createdHistory ? 'after:w-full' : 'after:w-0'} `}  style={{padding:"10px 30px"}}
+              onClick={() => setCreatedHistory(false)}
+            >
+              Joined by Me
+            </button>
+          </div>
+
+          {
+            createdHistory ? 
+              <div className="history-cards-container">
+            {historyMine.map((room) => (
               <div key={room.id} className="history-card">
                 
                 {/* Room Name */}
@@ -74,7 +89,7 @@ export default function HistoryPage() {
                     <User size={18} className="history-icon-user" />
                     <div className="history-info-content">
                       <span className="history-info-label">Created by:</span>
-                      <span className="history-info-value">{room.createdBy}</span>
+                      <span className="history-info-value">{room.host.fullName}</span>
                     </div>
                   </div>
 
@@ -83,7 +98,7 @@ export default function HistoryPage() {
                     <Calendar size={18} className="history-icon-calendar" />
                     <div className="history-info-content">
                       <span className="history-info-label">Date:</span>
-                      <span className="history-info-value date">{room.date}</span>
+                      <span className="history-info-value date">{new Date(room.updatedAt).toLocaleDateString()}</span>
                     </div>
                   </div>
 
@@ -99,6 +114,50 @@ export default function HistoryPage() {
               </div>
             ))}
           </div>
+            :
+                         <div className="history-cards-container">
+            {historyJoined.map((room) => (
+              <div key={room.id} className="history-card">
+                
+                {/* Room Name */}
+                <h2 className="history-room-name">{room.roomName}</h2>
+
+                {/* Bottom Row */}
+                <div className="history-bottom-row">
+                  
+                  {/* Created By */}
+                  <div className="history-info-box">
+                    <User size={18} className="history-icon-user" />
+                    <div className="history-info-content">
+                      <span className="history-info-label">Created by:</span>
+                      <span className="history-info-value">{room.host.fullName}</span>
+                    </div>
+                  </div>
+
+                  {/* Date */}
+                  <div className="history-info-box">
+                    <Calendar size={18} className="history-icon-calendar" />
+                    <div className="history-info-content">
+                      <span className="history-info-label">Date:</span>
+                      <span className="history-info-value date">{new Date(room.updatedAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+
+                  {/* Open Button */}
+                  <button
+                    onClick={() => handleOpenRoom(room.id)}
+                    className="history-open-button"
+                  >
+                    <Play size={20} fill="white" />
+                    
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          }
+          {/* History Cards */}
+          
         </div>
       </div>
     </div>

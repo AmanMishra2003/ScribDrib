@@ -47,6 +47,12 @@ const RoomSchema = new Schema({
             ref:"Comment"
         }
     ],
+    joinedUser:[
+        {
+            type:Schema.Types.ObjectId,
+            ref:"authSchema"
+        }
+    ],
     expiredAt: {
         type: Date,
         default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),

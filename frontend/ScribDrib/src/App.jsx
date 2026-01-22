@@ -42,8 +42,9 @@ function App() {
       <Route path='/demo' element={<Whiteboard/>}/>
       <Route path="/joinRoom" element={<ProtectRoute><RoomOptions /></ProtectRoute>} />
       <Route path="/room/:roomId" element={<ProtectRoute><RoomPage/></ProtectRoute>}/>
-      <Route path="/history" element={<ProtectRoute><HistoryPage /></ProtectRoute>}
-  />{/*<Route 
+      <Route path="/history" element={<ProtectRoute><HistoryPage /></ProtectRoute>}/>
+      {/* <Route path="/history/whiteboard" element={<ProtectRoute><WhiteboardHistoryPage /></ProtectRoute>}/> */}
+  {/*<Route 
   path="/history/room/:roomId" 
   element={<ProtectRoute><HistoryRoomPage /></ProtectRoute>}
 />*/}

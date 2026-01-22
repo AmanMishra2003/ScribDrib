@@ -2,15 +2,16 @@ import axios from "axios";
 
 //creating api connection to backend
 const api = axios.create({
-    baseURL: 'http://localhost:3000',
-    headers: {
-        'Content-Type': 'application/json'
-    }
+    baseURL: 'http://localhost:3000/',
+    // headers: {
+    //     'Content-Type': 'application/json'
+    // }
 })
 
 //interceptor function for axios automatically add token to header
 api.interceptors.request.use((config)=>{
     const token = localStorage.getItem('token'); //taking items from local storage
+    console.log("Token from localStorage:", token);
 
     if(token){
         config.headers.Authorization = `Bearer ${token}`; //adding token to header
@@ -29,7 +30,7 @@ api.interceptors.response.use((response)=>{
 },(error)=>{
     if(error.response && error.response.status===401){
         localStorage.removeItem('token');
-        window.location.href='/login';
+        window.location.href='/auth/login';
     }
     return Promise.reject(error);   
 })

@@ -14,6 +14,7 @@ import {
     Trash2,
     Layers,
     Ungroup,
+    Highlighter,
 } from "lucide-react";
 
 const Tool = {
@@ -247,8 +248,8 @@ const Whiteboard = ({ roomId, initialBoard }) => {
                 canvas.freeDrawingBrush.width = strokeWidth * 5;
             } else {
                 canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
-                canvas.freeDrawingBrush.color = BG_COLOR;
-                canvas.freeDrawingBrush.width = strokeWidth * 10;
+                canvas.freeDrawingBrush.color = strokeColor;
+                canvas.freeDrawingBrush.width = strokeWidth * 5;
             }
         }
 
@@ -500,8 +501,9 @@ const Whiteboard = ({ roomId, initialBoard }) => {
         { id: Tool.RECT, icon: Square, label: "Rectangle" },
         { id: Tool.CIRCLE, icon: CircleIcon, label: "Circle" },
         { id: Tool.TEXT, icon: Type, label: "Text" },
-        { id: Tool.ERASER, icon: Eraser, label: "Eraser" },
+        { id: Tool.ERASER, icon: Highlighter, label: "Highliter" },
     ];
+
 
     return (
         <div className="flex flex-col md:flex-row h-full p-2">

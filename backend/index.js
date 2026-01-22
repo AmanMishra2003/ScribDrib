@@ -31,9 +31,11 @@ mongoose.connect(mongodbPath).then(() => {
 // Router imports
 const HomeRouter = require('./Router/homeRouter');
 const AuthRouter = require('./Router/authRouter');
+const HistoryRouter = require('./Router/historyRouter');
 
 app.use('/', HomeRouter);
 app.use('/auth', AuthRouter);
+app.use('/history', HistoryRouter);
 
 // Error handler
 app.use((err, req, res, next) => {
@@ -123,6 +125,9 @@ io.on('connection', (socket) => {
           name: user.fullName,
           socketId: socket.id
         });
+
+        //add to joinedUser array --> this user joined at some point keeping track
+        room.joinedUser.push(user._id);
       }
 
       await room.save();
