@@ -6,6 +6,7 @@ import "./HistoryPage.css";
 export default function HistoryPage() {
   const navigate = useNavigate();
   const [history, setHistory] = useState([]);
+  
 
   useEffect(() => {
     setHistory([
@@ -34,9 +35,9 @@ export default function HistoryPage() {
     navigate("/");
   };
 
-  const handleOpenRoom = (roomId) => {
-    console.log("Open room:", roomId);
-  };
+//  const handleOpenRoom = (roomId) => {
+//   navigate(`/history/room/${roomId}`);
+// };
 
   return (
     <div className="history-page-wrapper">
@@ -88,7 +89,7 @@ export default function HistoryPage() {
 
                   {/* Open Button */}
                   <button
-                    onClick={() => handleOpenRoom(room.id)}
+                    // onClick={() => handleOpenRoom(room.id)}
                     className="history-open-button"
                   >
                     <Play size={20} fill="white" />

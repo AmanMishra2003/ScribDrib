@@ -4,6 +4,8 @@ import { ToastContainer } from 'react-toastify';
 import RoomOptions from "./components/roomoptions/roomOptions.jsx";
 import RoomPage from "./components/roomoptions/RoomPage.jsx";
 import HistoryPage from "./components/HistoryPage/HistoryPage.jsx";
+import PageNotFound from './components/notFoundPage/PageNotFound';
+//import HistoryRoomPage from "./components/HistoryPage/HistoryRoomPage.jsx";
 
 
 // HomePage
@@ -41,13 +43,17 @@ function App() {
       <Route path="/joinRoom" element={<ProtectRoute><RoomOptions /></ProtectRoute>} />
       <Route path="/room/:roomId" element={<ProtectRoute><RoomPage/></ProtectRoute>}/>
       <Route path="/history" element={<ProtectRoute><HistoryPage /></ProtectRoute>}
-  />
+  />{/*<Route 
+  path="/history/room/:roomId" 
+  element={<ProtectRoute><HistoryRoomPage /></ProtectRoute>}
+/>*/}
       {/* Auth layout */}
       <Route path='/auth' element={<AuthComponent />}>
         <Route path='login' element={<Login />} />
         <Route path='signup' element={<Signup />} />
-        {/*Room Options*/}
       </Route>
+
+      <Route path='*' element={<PageNotFound/>}/>
     </Routes>
     </>
   )
