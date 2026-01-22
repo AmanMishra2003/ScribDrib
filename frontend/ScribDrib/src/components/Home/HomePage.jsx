@@ -7,14 +7,15 @@ export default function HomePage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('userDetails');
+    const token = localStorage.getItem("token");
+    const userData = localStorage.getItem("userDetails");
     console.log("User Data from localStorage:", userData);
+
     if (userData) {
       setUserInfo(JSON.parse(userData));
     }
     if (token) {
-      setHasToken(!!token); // true if token exists
+      setHasToken(!!token);
     }
   }, []);
 
@@ -24,15 +25,16 @@ export default function HomePage() {
     navigate("/");
   };
 
-
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col" style={{ padding: "20px" }}>
+      
       {/* Navbar */}
       <nav
         className="flex justify-between items-center bg-slate-900 shadow-md rounded-xl"
         style={{ padding: "15px 25px", marginBottom: "20px" }}
       >
         <h1 className="text-2xl font-bold">MyWebsite</h1>
+
         <div className="flex gap-6 text-sm font-medium">
           {!hasToken ? (
             <>
@@ -45,13 +47,22 @@ export default function HomePage() {
             </>
           ) : (
             <>
-            <span className="capitalize">{userInfo?.name}</span>
-            <button
-              onClick={handleLogout}
-              className="text-red-400 hover:text-red-500 transition font-semibold"
-            >
-              Logout
-            </button>
+              <span className="capitalize">{userInfo?.name}</span>
+
+              {/* ✅ History Button Added */}
+              <Link
+                to="/history"
+                className="hover:text-blue-400 transition"
+              >
+                History
+              </Link>
+
+              <button
+                onClick={handleLogout}
+                className="text-red-400 hover:text-red-500 transition font-semibold"
+              >
+                Logout
+              </button>
             </>
           )}
         </div>
@@ -65,26 +76,28 @@ export default function HomePage() {
         <h2 className="text-4xl md:text-6xl font-extrabold mb-4">
           Welcome to <span className="text-blue-500">Your Next App</span>
         </h2>
+
         <p className="max-w-xl text-slate-300 text-lg md:text-xl mb-6">
           A modern platform built for speed, performance, and beautiful user experience.
         </p>
-        <div ckassName="flex gap-4" style={{margin:'20px'}}>
+
+        <div className="flex gap-4" style={{ margin: "20px" }}>
           <Link
-          to="/joinRoom"
-          className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg"
-          style={{ padding: "10px", margin: "10px" }}
-        >
-          Join Room
-        </Link>
+            to="/joinRoom"
+            className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg"
+            style={{ padding: "10px", margin: "10px" }}
+          >
+            Join Room
+          </Link>
+
           <Link
-          to="/demo"
-          className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg"
-          style={{ padding: "10px", margin: "10px" }}
-        >
-          Demo
-        </Link>
+            to="/demo"
+            className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg"
+            style={{ padding: "10px", margin: "10px" }}
+          >
+            Demo
+          </Link>
         </div>
-        
       </header>
 
       {/* Features Section */}
@@ -95,70 +108,35 @@ export default function HomePage() {
       >
         <h3 className="text-3xl font-bold mb-10">Features</h3>
 
-        <div
-          className="flex justify-center mx-auto flex-wrap gap-8 "
-          style={{ padding: "10px" }}
-        >
-          <div
-            className="p-6 bg-slate-800 rounded-2xl shadow hover:shadow-lg transition"
-            style={{ padding: "10px" }}
-          >
+        <div className="flex justify-center mx-auto flex-wrap gap-8" style={{ padding: "10px" }}>
+          <div className="p-6 bg-slate-800 rounded-2xl shadow hover:shadow-lg transition" style={{ padding: "10px" }}>
             <h4 className="text-xl font-semibold mb-2">Fast</h4>
-            <p className="text-slate-400">
-              Optimized for top-tier performance and responsiveness.
-            </p>
+            <p className="text-slate-400">Optimized for top-tier performance and responsiveness.</p>
           </div>
-          <div
-            className="p-6 bg-slate-800 rounded-2xl shadow hover:shadow-lg transition"
-            style={{ padding: "10px" }}
-          >
+
+          <div className="p-6 bg-slate-800 rounded-2xl shadow hover:shadow-lg transition" style={{ padding: "10px" }}>
             <h4 className="text-xl font-semibold mb-2">Secure</h4>
-            <p className="text-slate-400">
-              Built with modern security best practices.
-            </p>
+            <p className="text-slate-400">Built with modern security best practices.</p>
           </div>
 
-          <div
-            className="p-6 bg-slate-800 rounded-2xl shadow hover:shadow-lg transition"
-            style={{ padding: "10px" }}
-          >
+          <div className="p-6 bg-slate-800 rounded-2xl shadow hover:shadow-lg transition" style={{ padding: "10px" }}>
             <h4 className="text-xl font-semibold mb-2">Beautiful</h4>
-            <p className="text-slate-400">
-              Crafted with stunning UI and smooth interactions.
-            </p>
+            <p className="text-slate-400">Crafted with stunning UI and smooth interactions.</p>
           </div>
 
-          {/* Added Feature 1 */}
-          <div
-            className="p-6 bg-slate-800 rounded-2xl shadow hover:shadow-lg transition"
-            style={{ padding: "10px" }}
-          >
+          <div className="p-6 bg-slate-800 rounded-2xl shadow hover:shadow-lg transition" style={{ padding: "10px" }}>
             <h4 className="text-xl font-semibold mb-2">Collaborative</h4>
-            <p className="text-slate-400">
-              Real-time collaboration tools built for teams.
-            </p>
+            <p className="text-slate-400">Real-time collaboration tools built for teams.</p>
           </div>
 
-          {/* Added Feature 2 */}
-          <div
-            className="p-6 bg-slate-800 rounded-2xl shadow hover:shadow-lg transition"
-            style={{ padding: "10px" }}
-          >
+          <div className="p-6 bg-slate-800 rounded-2xl shadow hover:shadow-lg transition" style={{ padding: "10px" }}>
             <h4 className="text-xl font-semibold mb-2">Customizable</h4>
-            <p className="text-slate-400">
-              Tailor the experience with flexible UI options.
-            </p>
+            <p className="text-slate-400">Tailor the experience with flexible UI options.</p>
           </div>
 
-          {/* Added Feature 3 */}
-          <div
-            className="p-6 bg-slate-800 rounded-2xl shadow hover:shadow-lg transition"
-            style={{ padding: "10px" }}
-          >
+          <div className="p-6 bg-slate-800 rounded-2xl shadow hover:shadow-lg transition" style={{ padding: "10px" }}>
             <h4 className="text-xl font-semibold mb-2">Cloud Ready</h4>
-            <p className="text-slate-400">
-              Fully optimized for cloud deployment and scaling.
-            </p>
+            <p className="text-slate-400">Fully optimized for cloud deployment and scaling.</p>
           </div>
         </div>
       </section>
