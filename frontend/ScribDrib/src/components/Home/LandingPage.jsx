@@ -171,6 +171,15 @@ export default function LandingPage() {
                 <span className="user-badge">
                   {userInfo?.name || 'User'}
                 </span>
+                {/* ✅ History Button */}
+      <Link
+        to="/history"
+        className="auth-link"
+        style={{ fontWeight: 500 }}
+      >
+        History
+      </Link>
+
                 <button
                   onClick={handleLogout}
                   className="logout-btn"
