@@ -21,6 +21,7 @@ import RoomPage from "./components/roomoptions/RoomPage.jsx";
 
 // White Board Demo Component
 import Whiteboard from './components/WhiteBoardLibrary/WhiteBoard';
+import WhiteBoardDemo from './components/WhiteBoardLibrary/WhiteBoardDemo'
 
 //History Page Components
 import HistoryPage from "./components/HistoryPage/HistoryPage.jsx";
@@ -44,7 +45,7 @@ function App() {
     <Routes>
       {/* Home page */}
      <Route path="/" element={<LandingPage />} />
-      <Route path='/demo' element={<Whiteboard/>}/>
+      <Route path='/demo' element={<WhiteBoardDemo/>}/>
       <Route path="/joinRoom" element={<ProtectRoute><RoomOptions /></ProtectRoute>} />
       <Route path="/room/:roomId" element={<ProtectRoute><RoomPage/></ProtectRoute>}/>
       <Route path="/history" element={<ProtectRoute><HistoryPage /></ProtectRoute>}/>
