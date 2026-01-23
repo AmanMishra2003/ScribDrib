@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, Play, Calendar, User,  } from "lucide-react";
+import { ArrowLeft, Play, Calendar, User,Download  } from "lucide-react";
 import {Circles} from 'react-loader-spinner'
 import { useNavigate, Link } from "react-router-dom";
 import "./HistoryPage.css";
 import api from "../../API/axios";
 import { toast } from "react-toastify";
+import jsPDF from "jspdf";
 
 export default function HistoryPage() {
   const navigate = useNavigate();
@@ -34,9 +35,77 @@ export default function HistoryPage() {
 
   }, []);
 
+  //pdf download button
+  const downloadHistoryAsPDF = async (room) => {
+    // Parse boardData if it's a string
+    let boardData = room.boardData;
+    if (typeof boardData === 'string') {
+      try {
+        boardData = JSON.parse(boardData);
+      } catch (e) {
+        toast.error("Invalid board data format");
+        return;
+      }
+    }
+
+    if (!boardData) {
+      toast.error("No board data available for this room");
+      return;
+    }
+
+    try {
+      // Create temporary canvas
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = window.innerWidth;
+      tempCanvas.height = window.innerHeight - 64;
+
+      const fabricCanvas = new fabric.Canvas(tempCanvas, {
+        backgroundColor: '#020617',
+      });
+
+      // Load board data
+      await new Promise((resolve) => {
+        fabricCanvas.loadFromJSON(boardData, () => {
+          fabricCanvas.renderAll();
+          resolve();
+        });
+      });
+
+      // Export as PNG for PDF
+      const dataURL = fabricCanvas.toDataURL({
+        format: 'png',
+        quality: 1,
+        multiplier: 2
+      });
+
+      // Create PDF
+      const canvasWidth = fabricCanvas.width;
+      const canvasHeight = fabricCanvas.height;
+
+      const pdf = new jsPDF({
+        orientation: canvasWidth > canvasHeight ? 'landscape' : 'portrait',
+        unit: 'px',
+        format: [canvasWidth, canvasHeight]
+      });
+
+      pdf.addImage(dataURL, 'PNG', 0, 0, canvasWidth, canvasHeight);
+
+      const date = new Date(room.updatedAt).toISOString().slice(0, 10);
+      pdf.save(`${room.roomName}-${date}.pdf`);
+
+      // Cleanup
+      fabricCanvas.dispose();
+      toast.success("Downloaded as PDF");
+    } catch (error) {
+      console.error("Error downloading PDF:", error);
+      toast.error("Failed to download PDF");
+    }
+  };
+
   const handleBackToHome = () => {
     navigate("/");
   };
+
 
 
   return (
@@ -117,6 +186,15 @@ export default function HistoryPage() {
                                 <span className="history-info-value date">{new Date(room.updatedAt).toLocaleDateString()}</span>
                               </div>
                             </div>
+
+                            {/* PDF Button */}
+                            <button
+                          onClick={() => downloadHistoryAsPDF(room)}
+                          className="history-download-button"
+                          title="Download as PDF"
+                        >
+                          <Download size={18} /> Board Data
+                        </button>
 
                             {/* Open Button */}
                             <Link

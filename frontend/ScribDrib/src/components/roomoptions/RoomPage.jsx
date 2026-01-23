@@ -17,9 +17,9 @@ function RoomPage() {
   const [hostName, setHostName] = useState("");
   const [summary, setSummary] = useState('');
   const [permittedMember, setPermittedMember] = useState([]);
-  console.log(permittedMember)
-  // const host = useRef(null);
-  console.log(currentUser);
+  // console.log(permittedMember)
+  // // const host = useRef(null);
+  // console.log(currentUser);
   useEffect(() => {
     if (!roomId) {
       navigate("/");
