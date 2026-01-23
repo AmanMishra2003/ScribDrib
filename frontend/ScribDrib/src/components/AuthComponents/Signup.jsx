@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import Loader from "../ui/loader"
+import Loader from "../ui/Loader"
 import api from '../../API/axios'
 
 export default function Signup() {
