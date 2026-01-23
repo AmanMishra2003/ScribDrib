@@ -6,6 +6,7 @@ const router = express.Router();
 //import model
 const Room = require('../models/roomModel')
 
+//Google Ai api integration
 const ai = new GoogleGenAI(
     {
         apiKey: process.env.GEMINIAPIKEY
@@ -16,16 +17,17 @@ const ai = new GoogleGenAI(
 router.post('/:id', authorization, async (req, res, next) => {
     try {
         const { id } = req.params;
-        console.log(id);
+        
+        //finding room validation
         const room = await Room.findOne({ roomId: id });
         if (!room) {
             return res.status(404).json({ success: false, msg: "Room not found" });
         }
-
         if (!room.boardData) {
             return res.status(400).json({ success: false, msg: "No board data available" });
         }
 
+        //prompt
         const prompt = `You are an AI that interprets and summarizes digital whiteboards.
 
 First, internally combine and analyze ALL whiteboard objects together — shapes, drawings, arrows, text, and layout — as a single unified scene. Understand the full picture, not each object separately.
@@ -63,6 +65,7 @@ ${room.boardData}
             contents: prompt,
         });
 
+        //generated output
         const output = response.candidates?.[0]?.content?.parts?.[0]?.text || "No summary generated"; // get generated text
 
         return res.json({ success: true, output });

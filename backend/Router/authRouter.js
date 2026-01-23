@@ -10,16 +10,15 @@ const User = require('../models/authModel')
 //signup route
 router.post('/signup', async (req, res, next) => {
     try {
-        // console.log(req.body);
         const { fullName, email, password } = req.body;
-        console.log(req.body);
 
+        //validations
         if (!fullName || !email || !password) {
             return res.status(400).json({ msg: "All fields required" });
         }
 
+        //checking for already existing user
         const userExist = await User.findOne({ email: String(email) });
-
         if (userExist) {
             return res.status(409).json({ msg: "Email already exists!" });
         }
@@ -36,6 +35,8 @@ router.post('/signup', async (req, res, next) => {
         //sign JWT
         const token = jwt.sign({ id: newUser._id }, process.env.JWTSECRET, { expiresIn: '1d' });
         if (!token) throw Error("there is no token made!!");
+
+        //success
         res.status(200).json({
             token,
             data: {
@@ -58,8 +59,6 @@ router.post('/signup', async (req, res, next) => {
 router.post('/login', async (req, res, next) => {
     try {
         const { email, password } = req.body;
-        console.log(req.body);
-
 
         //checking user exist or not
         const userExist = await User.findOne({ email }).select('+password');
@@ -68,7 +67,6 @@ router.post('/login', async (req, res, next) => {
                 msg: "User does not Exist!!"
             })
         }
-        console.log(userExist);
 
         //if user exist then compare password
         const isMatch = await bcrypt.compare(password, userExist.password);

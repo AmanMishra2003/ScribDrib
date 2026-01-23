@@ -15,6 +15,7 @@ export default function Login() {
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
 
+  //handleChange function
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -25,6 +26,7 @@ export default function Login() {
     }
   };
 
+  //client side verification
   const validateForm = () => {
     const newErrors = {};
 
@@ -41,6 +43,7 @@ export default function Login() {
     return newErrors;
   };
 
+  //handle submit button
   const handleSubmit = async(e) => {
     e.preventDefault();
     const newErrors = validateForm();

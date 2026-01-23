@@ -19,6 +19,7 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  //form handler
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -29,6 +30,7 @@ export default function Signup() {
     }
   };
 
+  //client side validation
   const validateForm = () => {
     const newErrors = {};
 
@@ -57,6 +59,7 @@ export default function Signup() {
     return newErrors;
   };
 
+  //submission handler
   const handleSubmit = async (e) => {
     e.preventDefault(); //preventing default behaiviour
 

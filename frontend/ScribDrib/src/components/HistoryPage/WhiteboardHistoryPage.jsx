@@ -27,7 +27,6 @@ function WhiteboardHistoryPage() {
                 setError(null);
 
                 const response = await api.get(`/history/${roomId}`);
-                // console.log(response);
 
                 const roomExist = response.data?.objectData;
 
@@ -37,14 +36,9 @@ function WhiteboardHistoryPage() {
                     parsed = JSON.parse(parsed);
                 }
 
-                // console.log("Parsed final board JSON:", parsed);
-
-                // FIX: set ONLY the parsed board JSON
                 setBoardData(parsed);
                 setChats(roomExist.chat || []);
 
-                // console.log("📥 Loaded board data:", roomExist.boardData);
-                // console.log("💬 Loaded chats:", roomExist.chat);
             } catch (err) {
                 console.error("Error fetching board:", err);
                 setError(err.response?.data?.msg || err.message || "Failed to load whiteboard");
@@ -136,55 +130,6 @@ function WhiteboardHistoryPage() {
         });
     };
 
-    // if (loading) {
-    //     return (
-    //         <div className="wb-loading-container">
-    //             <div className="wb-loading-content">
-    //                 <Loader2 className="wb-loading-spinner" />
-    //                 <p className="wb-loading-text">Loading whiteboard history...</p>
-    //             </div>
-    //         </div>
-    //     );
-    // }
-
-    // if (error) {
-    //     return (
-    //         <div className="wb-error-container">
-    //             <div className="wb-error-content">
-    //                 <div className="wb-error-icon">⚠️</div>
-    //                 <h2 className="wb-error-title">Error Loading Board</h2>
-    //                 <p className="wb-error-message">{error}</p>
-    //                 <div className="wb-error-actions">
-    //                     <button onClick={() => navigate(-1)} className="wb-btn wb-btn-secondary">
-    //                         <ArrowLeft size={16} />
-    //                         Go Back
-    //                     </button>
-    //                     <button onClick={() => window.location.reload()} className="wb-btn wb-btn-primary">
-    //                         Retry
-    //                     </button>
-    //                 </div>
-    //             </div>
-    //         </div>
-    //     );
-    // }
-
-    // if (!boardData) {
-    //     return (
-    //         <div className="wb-empty-container">
-    //             <div className="wb-empty-content">
-    //                 <div className="wb-empty-icon">📋</div>
-    //                 <h2 className="wb-empty-title">No Data Available</h2>
-    //                 <p className="wb-empty-message">
-    //                     This whiteboard is empty or has no saved data.
-    //                 </p>
-    //                 <button onClick={() => navigate(-1)} className="wb-btn wb-btn-secondary">
-    //                     <ArrowLeft size={16} />
-    //                     Go Back
-    //                 </button>
-    //             </div>
-    //         </div>
-    //     );
-    // }
 
     return (
         <div className="wb-container">

@@ -76,36 +76,20 @@ function RoomOptions() {
   const [joining ,setJoining] = useState(false);
   const navigate = useNavigate();
 
-  // Cleanup socket listeners
-//  useEffect(() => {
-//   socket.on("connect_error", (err) => {
-//     console.log("Socket error:", err.message);
-
-//     if (
-//       err.message.includes("token") ||
-//       err.message.includes("Authentication")
-//     ) {
-//       toast.error("Session expired. Please login again.");
-//       socket.disconnect();
-//       navigate("/auth/login");
-//     }
-//   });
-
-//   return () => {
-//     socket.off("connect_error");
-//   };
-// }, [navigate]);
 
   // ================= CREATE ROOM =================
   const handleCreate = () => {
     if (!roomName.trim()) return toast.warning("Enter room name");
 
-    if (!socket.connected) socket.connect();
+    if (!socket.connected) socket.connect(); //if not connected make connection
 
-    socket.emit("createRoom", { roomName });
+    socket.emit("createRoom", { roomName }); //emit event
 
+    //catch event from backend
     socket.once("roomCreated", ({ roomId }) => {
       setJoining(true);
+
+      //debounce
       setTimeout(() => {
            navigate(`/room/${roomId}`);
       }, 300);
@@ -123,8 +107,10 @@ function RoomOptions() {
 
     if (!socket.connected) socket.connect();
 
+    //event emit
     socket.emit("joinRoom", { roomId });
 
+    //catch event from backend
     socket.once("roomJoined", ({ roomId,  }) => {
       setJoining(true);
 

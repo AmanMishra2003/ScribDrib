@@ -21,7 +21,7 @@ const CommentSchema = new Schema({
         required:true
     },
 },{
-    timestamps:true  //✅ adds createdAt & updatedAt
+    timestamps:true  //adds createdAt & updatedAt
 });
 
 module.exports = mongoose.model("Comment",CommentSchema);

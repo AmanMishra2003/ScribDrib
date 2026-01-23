@@ -5,6 +5,7 @@ module.exports = function (req, res, next) {
     //get token from header
     const authHeader = req.headers['authorization'];
 
+    //checking for bearer prefix
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({ msg: "No token, authorization denied" });
     }

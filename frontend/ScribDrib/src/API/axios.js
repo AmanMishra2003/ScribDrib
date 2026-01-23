@@ -30,10 +30,14 @@ api.interceptors.request.use((config)=>{
 api.interceptors.response.use((response)=>{
     return response;
 },(error)=>{
+
+    //error 401 response --> JWT verify fail
     if(error.response && error.response.status===401){
         localStorage.removeItem('token');
         window.location.href='/auth/login';
     }
+
+    //return rejection 
     return Promise.reject(error);   
 })
 export default api;

@@ -16,7 +16,9 @@ export default function HistoryPage() {
 
 
   useEffect(() => {
+
     setLoading(true);
+
     //get request to fetch joined history
     const fetchJoinedHistory = async () => {
       try {
@@ -105,8 +107,6 @@ export default function HistoryPage() {
   const handleBackToHome = () => {
     navigate("/");
   };
-
-
 
   return (
     <>

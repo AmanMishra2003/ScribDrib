@@ -17,9 +17,7 @@ function RoomPage() {
   const [hostName, setHostName] = useState("");
   const [summary, setSummary] = useState('');
   const [permittedMember, setPermittedMember] = useState([]);
-  // console.log(permittedMember)
-  // // const host = useRef(null);
-  // console.log(currentUser);
+
   useEffect(() => {
     if (!roomId) {
       navigate("/");
@@ -45,6 +43,7 @@ function RoomPage() {
       socket.on("connect", attemptJoin);
     }
 
+    //room joined function
     const handleRoomJoined = ({ roomName, users, boardData, currentUser: user, host }) => {
       console.log("Room joined:", { roomName, users, boardData });
       if (boardData) {
@@ -61,6 +60,7 @@ function RoomPage() {
       setMembers(users || []);
     };
 
+    //handle user joined
     const handleUserJoined = ({ userId, name }) => {
       console.log("User joined:", { userId, name });
       setMembers((prev) => {
@@ -69,19 +69,22 @@ function RoomPage() {
       });
       toast.info(`${name} joined the room`);
     };
-
+ 
+    //handle user joined
     const handleUserLeft = ({ userId, name }) => {
       console.log("User left:", { userId, name });
       setMembers((prev) => prev.filter((m) => m.userId !== userId));
       toast.info(`${name} left the room`);
     };
 
+    //handle room closed
     const handleRoomClosed = () => {
       toast.error("Host left. Room closed.");
       socket.disconnect();
       navigate("/");
     };
 
+    // permission update
     socket.on("permission:update", ({ permitted }) => {
       setPermittedMember(permitted);
       toast.info("Permissions updated");
@@ -175,11 +178,10 @@ function RoomPage() {
             </button>
           </div>
         </div>
-        {console.log(hostName)}
         {
-          currentUser &&
+          currentUser && 
           <Whiteboard roomId={roomId} initialBoard={boardRef.current} permittedMember={permittedMember} currentUser={currentUser} hostName={hostName} />
-        }
+         } 
       </div>
 
       {/* RIGHT PANEL */}
@@ -236,9 +238,7 @@ function Members({ members, hostName, handlePermission, currentUser, permittedMe
       </p>
     );
   }
-
-
-
+  
   return (
     <div>
       {members.map((m) => (

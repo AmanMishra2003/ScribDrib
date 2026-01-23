@@ -3,12 +3,12 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const { Server } = require('socket.io');
-const { createServer } = require('http');
+const { createServer } = require('http'); //http server for socket.io
 const socketAuth = require('./middleware/socketAuth');
 const Room = require('./models/roomModel');
 const Comment = require('./models/comments');
-const { v4: uuidv4 } = require('uuid');
-const watchRoomDelete = require('./middleware/watchRoomDelete');
+const { v4: uuidv4 } = require('uuid'); //random uuid generator
+const watchRoomDelete = require('./middleware/watchRoomDelete'); //expiry
 
 const app = express();
 const port = 3000;
@@ -16,6 +16,7 @@ const URL = process.env.PORT || 'http://localhost:5173'
 
 app.use(cors({
   origin: "https://scrib-drib-bnqh.vercel.app",
+  //  origin:"*",
   credentials: true
 }));
 
@@ -54,6 +55,7 @@ const server = createServer(app);
 const io = new Server(server, {
   cors: {
     origin: "https://scrib-drib-bnqh.vercel.app",
+    // origin:"*",
     credentials: true
   }
 });
@@ -188,10 +190,9 @@ io.on('connection', (socket) => {
   // ===== BOARD UPDATE ===== - FIXED
   socket.on("board:update", async ({ roomId, boardData }) => {
     try {
-      console.log(`📥 Server received board update from ${user.fullName} for room ${roomId}`);
+      // console.log(`📥 Server received board update from ${user.fullName} for room ${roomId}`);
       
-      const serialized = JSON.stringify(boardData);
-
+      const serialized = JSON.stringify(boardData); //converting object to string version
       
       //Broadcast to OTHERS only (not sender)
       socket.to(roomId).emit("board:update", boardData);
@@ -200,7 +201,7 @@ io.on('connection', (socket) => {
         { roomId, isActive: true },
         { boardData: serialized }
       );
-      console.log(`📤 Server broadcasted board update to room ${roomId} (excluding sender)`);
+      // console.log(`📤 Server broadcasted board update to room ${roomId} (excluding sender)`);
     } catch (err) {
       console.error("Board update error:", err);
       socket.emit("error", { msg: "Failed to update board" });
@@ -210,6 +211,7 @@ io.on('connection', (socket) => {
   // ===== REQUEST CHAT HISTORY =====
   socket.on("chat:requestHistory", async ({ roomId }) => {
     try {
+      //finding room
       const room = await Room.findOne({ roomId, isActive: true })
         .populate({
           path: 'chat',
@@ -218,6 +220,7 @@ io.on('connection', (socket) => {
 
       if (!room) return;
 
+      //return array of all the chat message
       const chatMessages = room.chat.map(msg => ({
         text: msg.commentText,
         userName: msg.userName,

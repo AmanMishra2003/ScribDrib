@@ -19,6 +19,7 @@ const AuthSchema = new schema({
     }
 })
 
+//hashing password function
 AuthSchema.pre('save', async function(){
     if(!this.isModified('password')){
         return;
