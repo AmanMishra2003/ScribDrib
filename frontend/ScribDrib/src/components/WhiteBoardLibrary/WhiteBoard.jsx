@@ -17,6 +17,7 @@ import {
     Highlighter,
 } from "lucide-react";
 
+//All Tool Object
 const Tool = {
     SELECT: "select",
     PEN: "pen",
@@ -29,6 +30,7 @@ const Tool = {
 
 const BG_COLOR = "#020617";
 
+//converting hex to RCBA format
 function hexToRGBA(hex, opacity) {
     let r = parseInt(hex.slice(1, 3), 16);
     let g = parseInt(hex.slice(3, 5), 16);
@@ -42,9 +44,8 @@ const Whiteboard = ({ roomId, initialBoard, permittedMember, currentUser, hostNa
     const fabricCanvas = useRef(null);
     const hasLoadedInitialBoard = useRef(false);
 
-
-    const [activeTool, setActiveTool] = useState(Tool.SELECT);
-    const [strokeColor, setStrokeColor] = useState("#3b82f6");
+    const [activeTool, setActiveTool] = useState(Tool.SELECT); //containing Tool 
+    const [strokeColor, setStrokeColor] = useState("#3b82f6"); 
     const [fillColor, setFillColor] = useState("transparent");
     const [strokeWidth, setStrokeWidth] = useState(3);
     const [canUndo, setCanUndo] = useState(false);
@@ -61,14 +62,14 @@ const Whiteboard = ({ roomId, initialBoard, permittedMember, currentUser, hostNa
     useEffect(() => { strokeWidthRef.current = strokeWidth; }, [strokeWidth]);
 
 
-    const undoStack = useRef([]);
-    const redoStack = useRef([]);
+    const undoStack = useRef([]); //undoStack 
+    const redoStack = useRef([]); //redoStack
     const isStateChanging = useRef(false);
     const saveTimeout = useRef(null);
 
     const isMouseDown = useRef(false);
     const currentShape = useRef(null);
-    const startPoint = useRef({ x: 0, y: 0 });
+    const startPoint = useRef({ x: 0, y: 0 }); 
 
     // Save state and emit to server
     const saveState = (immediate = false) => {
