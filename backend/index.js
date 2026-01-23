@@ -12,9 +12,10 @@ const watchRoomDelete = require('./middleware/watchRoomDelete');
 
 const app = express();
 const port = 3000;
+const URL = process.env.PORT || 'http://localhost:5173'
 
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: URL,
   credentials: true
 }));
 
@@ -52,7 +53,7 @@ const server = createServer(app);
 // Socket.io setup
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: URL,
     credentials: true
   }
 });
