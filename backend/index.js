@@ -15,7 +15,7 @@ const port = 3000;
 const URL = process.env.PORT || 'http://localhost:5173'
 
 app.use(cors({
-  origin: URL,
+  origin: "https://scrib-drib-bnqh.vercel.app/",
   credentials: true
 }));
 
@@ -53,7 +53,7 @@ const server = createServer(app);
 // Socket.io setup
 const io = new Server(server, {
   cors: {
-    origin: URL,
+    origin: "https://scrib-drib-bnqh.vercel.app/",
     credentials: true
   }
 });
