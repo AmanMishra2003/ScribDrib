@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { socket } from "../../Socket/ws";
+import jsPDF from "jspdf";
 import {
     MousePointer2,
     Pencil,
@@ -15,6 +16,8 @@ import {
     Layers,
     Ungroup,
     Highlighter,
+    Download,
+    FileImage,
 } from "lucide-react";
 
 const Tool = {
@@ -100,7 +103,7 @@ const Whiteboard = ({ roomId, initialBoard }) => {
             fabricCanvas.current.renderAll();
             isStateChanging.current = false;
             hasLoadedInitialBoard.current = true;
-            
+
             const serialized = JSON.stringify(initialBoard);
             undoStack.current = [serialized];
             setCanUndo(false);
@@ -113,23 +116,23 @@ const Whiteboard = ({ roomId, initialBoard }) => {
 
         const handleBoardUpdate = (boardData) => {
             if (!boardData) return;
-            
+
             console.log("📥 Received board update:", { objectCount: boardData?.objects?.length || 0 });
-            
+
             // Prevent processing if it's the same state
             const currentState = JSON.stringify(fabricCanvas.current.toJSON());
             const incomingState = JSON.stringify(boardData);
-            
+
             if (currentState === incomingState) {
                 console.log("⏭️ Skipping identical state");
                 return;
             }
-            
+
             isStateChanging.current = true;
             fabricCanvas.current.loadFromJSON(boardData, () => {
                 fabricCanvas.current.renderAll();
                 isStateChanging.current = false;
-                
+
                 // Update undo stack
                 const serialized = JSON.stringify(boardData);
                 if (undoStack.current[undoStack.current.length - 1] !== serialized) {
@@ -268,12 +271,12 @@ const Whiteboard = ({ roomId, initialBoard }) => {
         const activeObjects = canvas.getActiveObjects();
         if (activeObjects.length > 0) {
             isStateChanging.current = true;
-            
+
             activeObjects.forEach((obj) => {
-                obj.set({ 
-                    stroke: strokeColor, 
+                obj.set({
+                    stroke: strokeColor,
                     strokeWidth,
-                    dirty: true 
+                    dirty: true
                 });
                 if (!["line", "i-text"].includes(obj.type)) {
                     obj.set({ fill: fillColor === "transparent" ? "transparent" : fillColor });
@@ -283,7 +286,7 @@ const Whiteboard = ({ roomId, initialBoard }) => {
                 }
                 obj.setCoords();
             });
-            
+
             canvas.requestRenderAll();
             isStateChanging.current = false;
             saveState(true);
@@ -380,7 +383,7 @@ const Whiteboard = ({ roomId, initialBoard }) => {
         const shape = currentShape.current;
 
         canvas.discardActiveObject();
-        
+
         switch (tool) {
             case Tool.RECT:
                 shape.set({
@@ -425,8 +428,8 @@ const Whiteboard = ({ roomId, initialBoard }) => {
             ) {
                 canvas.remove(currentShape.current);
             } else {
-                currentShape.current.set({ 
-                    selectable: true, 
+                currentShape.current.set({
+                    selectable: true,
                     evented: true,
                     objectCaching: true,
                 });
@@ -494,6 +497,51 @@ const Whiteboard = ({ roomId, initialBoard }) => {
         saveState(true);
     };
 
+    const downloadAsJPG = () => {
+        const canvas = fabricCanvas.current;
+        if (!canvas) return;
+
+        const dataURL = canvas.toDataURL({
+            format: 'jpeg',
+            quality: 0.9,
+            multiplier: 2 // Higher resolution
+        });
+
+        const link = document.createElement('a');
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        link.download = `whiteboard-${roomId}-${timestamp}.jpg`;
+        link.href = dataURL;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const downloadAsPDF = () => {
+        const canvas = fabricCanvas.current;
+        if (!canvas) return;
+
+        const dataURL = canvas.toDataURL({
+            format: 'png',
+            quality: 1,
+            multiplier: 2
+        });
+
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+
+        // Create PDF with canvas dimensions (in mm)
+        const pdf = new jsPDF({
+            orientation: canvasWidth > canvasHeight ? 'landscape' : 'portrait',
+            unit: 'px',
+            format: [canvasWidth, canvasHeight]
+        });
+
+        pdf.addImage(dataURL, 'PNG', 0, 0, canvasWidth, canvasHeight);
+
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        pdf.save(`whiteboard-${roomId}-${timestamp}.pdf`);
+    };
+
     const tools = [
         { id: Tool.SELECT, icon: MousePointer2, label: "Select" },
         { id: Tool.PEN, icon: Pencil, label: "Pen" },
@@ -512,11 +560,10 @@ const Whiteboard = ({ roomId, initialBoard }) => {
                     <button
                         key={tool.id}
                         onClick={() => setActiveTool(tool.id)}
-                        className={`rounded-lg transition-all duration-200 flex items-center justify-center gap-2 group relative m-5 ${
-                            activeTool === tool.id
-                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40'
-                                : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-100'
-                        }`}
+                        className={`rounded-lg transition-all duration-200 flex items-center justify-center gap-2 group relative m-5 ${activeTool === tool.id
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40'
+                            : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-100'
+                            }`}
                         style={{ padding: '12px 10px' }}
                         title={tool.label}
                     >
@@ -532,11 +579,10 @@ const Whiteboard = ({ roomId, initialBoard }) => {
                 <button
                     onClick={undo}
                     disabled={!canUndo}
-                    className={`p-3 rounded-lg flex items-center justify-center gap-2 ${
-                        canUndo
-                            ? 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-100'
-                            : 'bg-slate-800/50 text-slate-700 cursor-not-allowed'
-                    }`}
+                    className={`p-3 rounded-lg flex items-center justify-center gap-2 ${canUndo
+                        ? 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-100'
+                        : 'bg-slate-800/50 text-slate-700 cursor-not-allowed'
+                        }`}
                     title="Undo"
                 >
                     <Undo2 size={20} />
@@ -545,11 +591,10 @@ const Whiteboard = ({ roomId, initialBoard }) => {
                 <button
                     onClick={redo}
                     disabled={!canRedo}
-                    className={`p-3 rounded-lg flex items-center justify-center gap-2 ${
-                        canRedo
-                            ? 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-100'
-                            : 'bg-slate-800/50 text-slate-700 cursor-not-allowed'
-                    }`}
+                    className={`p-3 rounded-lg flex items-center justify-center gap-2 ${canRedo
+                        ? 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-100'
+                        : 'bg-slate-800/50 text-slate-700 cursor-not-allowed'
+                        }`}
                     title="Redo"
                 >
                     <Redo2 size={20} />
@@ -582,19 +627,17 @@ const Whiteboard = ({ roomId, initialBoard }) => {
                                 value={fillColor === 'transparent' ? '#000000' : fillColor}
                                 onChange={(e) => setFillColor(e.target.value)}
                                 disabled={fillColor === 'transparent'}
-                                className={`w-10 h-6 bg-transparent border-none cursor-pointer rounded p-1 ${
-                                    fillColor === 'transparent' ? 'opacity-30' : ''
-                                }`}
+                                className={`w-10 h-6 bg-transparent border-none cursor-pointer rounded p-1 ${fillColor === 'transparent' ? 'opacity-30' : ''
+                                    }`}
                             />
                             <button
                                 onClick={() =>
                                     setFillColor(fillColor === 'transparent' ? '#3b82f6' : 'transparent')
                                 }
-                                className={`px-2 py-1 text-[9px] rounded-md font-bold uppercase transition-colors ${
-                                    fillColor === 'transparent'
-                                        ? 'bg-slate-700 text-slate-300'
-                                        : 'bg-blue-600 text-white'
-                                }`}
+                                className={`px-2 py-1 text-[9px] rounded-md font-bold uppercase transition-colors ${fillColor === 'transparent'
+                                    ? 'bg-slate-700 text-slate-300'
+                                    : 'bg-blue-600 text-white'
+                                    }`}
                             >
                                 {fillColor === 'transparent' ? 'None' : 'Solid'}
                             </button>
@@ -651,6 +694,28 @@ const Whiteboard = ({ roomId, initialBoard }) => {
                             title="Delete"
                         >
                             <Trash2 size={18} />
+                        </button>
+                    </div>
+
+                    <div className="w-px h-8 bg-slate-800 shrink-0 px-1" />
+
+                    <div className="flex items-center gap-1 shrink-0 p-2">
+                        <button
+                            onClick={downloadAsJPG}
+                            className="p-2 hover:bg-slate-800 rounded text-slate-400 hover:text-green-400 flex items-center gap-1"
+                            title="Download as JPG"
+                        >
+                            <FileImage size={18} />
+                            <span className="text-xs hidden lg:inline">JPG</span>
+                        </button>
+
+                        <button
+                            onClick={downloadAsPDF}
+                            className="p-2 hover:bg-slate-800 rounded text-slate-400 hover:text-blue-400 flex items-center gap-1"
+                            title="Download as PDF"
+                        >
+                            <Download size={18} />
+                            <span className="text-xs hidden lg:inline">PDF</span>
                         </button>
                     </div>
                 </div>
