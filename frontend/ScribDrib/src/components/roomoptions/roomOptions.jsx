@@ -106,7 +106,6 @@ function RoomOptions() {
 
     socket.once("roomCreated", ({ roomId }) => {
       setJoining(true);
-
       setTimeout(() => {
            navigate(`/room/${roomId}`);
       }, 300);

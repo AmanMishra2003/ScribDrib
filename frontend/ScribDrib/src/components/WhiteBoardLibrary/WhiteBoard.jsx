@@ -30,16 +30,18 @@ const Tool = {
 const BG_COLOR = "#020617";
 
 function hexToRGBA(hex, opacity) {
-    let r = parseInt(hex.slice(1,3), 16);
-    let g = parseInt(hex.slice(3,5), 16);
-    let b = parseInt(hex.slice(5,7), 16);
+    let r = parseInt(hex.slice(1, 3), 16);
+    let g = parseInt(hex.slice(3, 5), 16);
+    let b = parseInt(hex.slice(5, 7), 16);
     return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 }
 
-const Whiteboard = ({ roomId, initialBoard }) => {
+
+const Whiteboard = ({ roomId, initialBoard, permittedMember, currentUser, hostName }) => {
     const canvasRef = useRef(null);
     const fabricCanvas = useRef(null);
     const hasLoadedInitialBoard = useRef(false);
+
 
     const [activeTool, setActiveTool] = useState(Tool.SELECT);
     const [strokeColor, setStrokeColor] = useState("#3b82f6");
@@ -57,6 +59,7 @@ const Whiteboard = ({ roomId, initialBoard }) => {
     useEffect(() => { strokeColorRef.current = strokeColor; }, [strokeColor]);
     useEffect(() => { fillColorRef.current = fillColor; }, [fillColor]);
     useEffect(() => { strokeWidthRef.current = strokeWidth; }, [strokeWidth]);
+
 
     const undoStack = useRef([]);
     const redoStack = useRef([]);
@@ -107,7 +110,7 @@ const Whiteboard = ({ roomId, initialBoard }) => {
             fabricCanvas.current.renderAll();
             isStateChanging.current = false;
             hasLoadedInitialBoard.current = true;
-            
+
             const serialized = JSON.stringify(initialBoard);
             undoStack.current = [serialized];
             setCanUndo(false);
@@ -120,23 +123,23 @@ const Whiteboard = ({ roomId, initialBoard }) => {
 
         const handleBoardUpdate = (boardData) => {
             if (!boardData) return;
-            
+
             console.log("📥 Received board update:", { objectCount: boardData?.objects?.length || 0 });
-            
+
             // Prevent processing if it's the same state
             const currentState = JSON.stringify(fabricCanvas.current.toJSON());
             const incomingState = JSON.stringify(boardData);
-            
+
             if (currentState === incomingState) {
                 console.log("⏭️ Skipping identical state");
                 return;
             }
-            
+
             isStateChanging.current = true;
             fabricCanvas.current.loadFromJSON(boardData, () => {
                 fabricCanvas.current.renderAll();
                 isStateChanging.current = false;
-                
+
                 // Update undo stack
                 const serialized = JSON.stringify(boardData);
                 if (undoStack.current[undoStack.current.length - 1] !== serialized) {
@@ -275,12 +278,12 @@ const Whiteboard = ({ roomId, initialBoard }) => {
         const activeObjects = canvas.getActiveObjects();
         if (activeObjects.length > 0) {
             isStateChanging.current = true;
-            
+
             activeObjects.forEach((obj) => {
-                obj.set({ 
-                    stroke: strokeColor, 
+                obj.set({
+                    stroke: strokeColor,
                     strokeWidth,
-                    dirty: true 
+                    dirty: true
                 });
                 if (!["line", "i-text"].includes(obj.type)) {
                     obj.set({ fill: fillColor === "transparent" ? "transparent" : fillColor });
@@ -290,7 +293,7 @@ const Whiteboard = ({ roomId, initialBoard }) => {
                 }
                 obj.setCoords();
             });
-            
+
             canvas.requestRenderAll();
             isStateChanging.current = false;
             saveState(true);
@@ -387,7 +390,7 @@ const Whiteboard = ({ roomId, initialBoard }) => {
         const shape = currentShape.current;
 
         canvas.discardActiveObject();
-        
+
         switch (tool) {
             case Tool.RECT:
                 shape.set({
@@ -432,8 +435,8 @@ const Whiteboard = ({ roomId, initialBoard }) => {
             ) {
                 canvas.remove(currentShape.current);
             } else {
-                currentShape.current.set({ 
-                    selectable: true, 
+                currentShape.current.set({
+                    selectable: true,
                     evented: true,
                     objectCaching: true,
                 });
@@ -511,39 +514,48 @@ const Whiteboard = ({ roomId, initialBoard }) => {
         { id: Tool.ERASER, icon: Highlighter, label: "Highliter" },
     ];
 
+    useEffect(() => {
+        if (!currentUser || !currentUser.userId) return
+        if (!permittedMember.includes(currentUser.userId)) {
+            setActiveTool(Tool.SELECT);
+        }
+    },[permittedMember, currentUser])
 
     return (
         <div className="flex flex-col md:flex-row h-full p-2">
             <div className="flex md:flex-col gap-2 p-5 bg-slate-900 border-r border-slate-800 z-10 overflow-x-auto no-scrollbar">
-                {tools.map((tool) => (
-                    <button
-                        key={tool.id}
-                        onClick={() => setActiveTool(tool.id)}
-                        className={`rounded-lg transition-all duration-200 flex items-center justify-center gap-2 group relative m-5 ${
-                            activeTool === tool.id
+                {
+                    (permittedMember.includes(currentUser.userId) || (currentUser.name) === hostName) &&
+                    tools.map((tool) => (
+                        <button
+                            key={tool.id}
+                            onClick={() => setActiveTool(tool.id)}
+                            className={`rounded-lg transition-all duration-200 flex items-center justify-center gap-2 group relative m-5 ${activeTool === tool.id
                                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40'
                                 : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-100'
-                        }`}
-                        style={{ padding: '12px 10px' }}
-                        title={tool.label}
-                    >
-                        <tool.icon size={20} />
-                        <span className="hidden lg:block text-xs font-medium px-5">
-                            {tool.label}
-                        </span>
-                    </button>
-                ))}
+                                }`}
+                            style={{ padding: '12px 10px' }}
+                            title={tool.label}
+                        >
+                            <tool.icon size={20} />
+                            <span className="hidden lg:block text-xs font-medium px-5">
+                                {tool.label}
+                            </span>
+                        </button>
+                    ))
+                }
 
                 <div className="h-px bg-slate-800 my-2 hidden md:block px-2" />
-
-                <button
+                {
+                (permittedMember.includes(currentUser.userId) || (currentUser.name) === hostName) &&
+                <>
+                     <button
                     onClick={undo}
                     disabled={!canUndo}
-                    className={`p-3 rounded-lg flex items-center justify-center gap-2 ${
-                        canUndo
-                            ? 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-100'
-                            : 'bg-slate-800/50 text-slate-700 cursor-not-allowed'
-                    }`}
+                    className={`p-3 rounded-lg flex items-center justify-center gap-2 ${canUndo
+                        ? 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-100'
+                        : 'bg-slate-800/50 text-slate-700 cursor-not-allowed'
+                        }`}
                     title="Undo"
                 >
                     <Undo2 size={20} />
@@ -552,20 +564,24 @@ const Whiteboard = ({ roomId, initialBoard }) => {
                 <button
                     onClick={redo}
                     disabled={!canRedo}
-                    className={`p-3 rounded-lg flex items-center justify-center gap-2 ${
-                        canRedo
-                            ? 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-100'
-                            : 'bg-slate-800/50 text-slate-700 cursor-not-allowed'
-                    }`}
+                    className={`p-3 rounded-lg flex items-center justify-center gap-2 ${canRedo
+                        ? 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-100'
+                        : 'bg-slate-800/50 text-slate-700 cursor-not-allowed'
+                        }`}
                     title="Redo"
                 >
                     <Redo2 size={20} />
                 </button>
+                </>
+                }
+               
             </div>
 
             <div className="flex-1 relative bg-slate-950 overflow-hidden cursor-crosshair p-2">
                 <canvas ref={canvasRef} className="p-2" />
 
+{
+    (permittedMember.includes(currentUser.userId) || (currentUser.name) === hostName) &&
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-4 px-4 py-2 bg-slate-900/90 backdrop-blur-sm border border-slate-800 rounded-2xl shadow-2xl z-20 max-w-[95vw] overflow-x-auto p-4" style={{ padding: '12px 10px' }}>
                     <div className="flex flex-col gap-1 min-w-fit p-2">
                         <label className="text-[10px] uppercase tracking-wider text-slate-500 font-bold px-1">
@@ -589,19 +605,17 @@ const Whiteboard = ({ roomId, initialBoard }) => {
                                 value={fillColor === 'transparent' ? '#000000' : fillColor}
                                 onChange={(e) => setFillColor(e.target.value)}
                                 disabled={fillColor === 'transparent'}
-                                className={`w-10 h-6 bg-transparent border-none cursor-pointer rounded p-1 ${
-                                    fillColor === 'transparent' ? 'opacity-30' : ''
-                                }`}
+                                className={`w-10 h-6 bg-transparent border-none cursor-pointer rounded p-1 ${fillColor === 'transparent' ? 'opacity-30' : ''
+                                    }`}
                             />
                             <button
                                 onClick={() =>
                                     setFillColor(fillColor === 'transparent' ? '#3b82f6' : 'transparent')
                                 }
-                                className={`px-2 py-1 text-[9px] rounded-md font-bold uppercase transition-colors ${
-                                    fillColor === 'transparent'
-                                        ? 'bg-slate-700 text-slate-300'
-                                        : 'bg-blue-600 text-white'
-                                }`}
+                                className={`px-2 py-1 text-[9px] rounded-md font-bold uppercase transition-colors ${fillColor === 'transparent'
+                                    ? 'bg-slate-700 text-slate-300'
+                                    : 'bg-blue-600 text-white'
+                                    }`}
                             >
                                 {fillColor === 'transparent' ? 'None' : 'Solid'}
                             </button>
@@ -661,6 +675,7 @@ const Whiteboard = ({ roomId, initialBoard }) => {
                         </button>
                     </div>
                 </div>
+}
 
                 <div className="absolute bottom-4 left-4 p-3 bg-slate-900/50 rounded-lg text-slate-500 text-[10px] pointer-events-none select-none">
                     Click & Drag to Draw • Double Click Text to Edit • Use Toolbar for Colors

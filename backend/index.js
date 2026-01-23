@@ -262,6 +262,12 @@ io.on('connection', (socket) => {
     }
   });
 
+  //======Permission=====
+socket.on("permission:update", ({ roomId, permitted }) => {
+  io.to(roomId).emit("permission:update", { permitted });
+});
+
+
   // ===== DISCONNECT =====
   socket.on("disconnect", async () => {
     try {

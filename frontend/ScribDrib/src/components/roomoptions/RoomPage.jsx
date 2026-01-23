@@ -16,8 +16,10 @@ function RoomPage() {
   const hasJoined = useRef(false);
   const [hostName, setHostName] = useState("");
   const [summary, setSummary] = useState('');
+  const [permittedMember, setPermittedMember] = useState([]);
+  console.log(permittedMember)
   // const host = useRef(null);
-
+  console.log(currentUser);
   useEffect(() => {
     if (!roomId) {
       navigate("/");
@@ -80,6 +82,11 @@ function RoomPage() {
       navigate("/");
     };
 
+    socket.on("permission:update", ({ permitted }) => {
+      setPermittedMember(permitted);
+      toast.info("Permissions updated");
+    });
+
     const handleError = ({ msg }) => {
       toast.error(msg || "An error occurred");
       navigate("/");
@@ -97,15 +104,35 @@ function RoomPage() {
       socket.off("userJoined", handleUserJoined);
       socket.off("user-left", handleUserLeft);
       socket.off("room-closed", handleRoomClosed);
+      socket.off("permission:update");
       socket.off("error", handleError);
     };
   }, [roomId, navigate]);
+
+
 
   const handleLeave = () => {
     socket.disconnect();
     hasJoined.current = false;
     navigate("/");
   };
+
+
+  const handlePermission = (id) => {
+    const updated = permittedMember.includes(id)
+      ? permittedMember.filter(x => x !== id)
+      : [...permittedMember, id];
+
+    // Update host UI immediately
+    setPermittedMember(updated);
+
+    // Broadcast to room
+    socket.emit("permission:update", {
+      roomId,
+      permitted: updated
+    });
+  }
+
 
   return (
     <div style={styles.page}>
@@ -148,8 +175,11 @@ function RoomPage() {
             </button>
           </div>
         </div>
-
-        <Whiteboard roomId={roomId} initialBoard={boardRef.current} />
+        {console.log(hostName)}
+        {
+          currentUser &&
+          <Whiteboard roomId={roomId} initialBoard={boardRef.current} permittedMember={permittedMember} currentUser={currentUser} hostName={hostName} />
+        }
       </div>
 
       {/* RIGHT PANEL */}
@@ -176,9 +206,9 @@ function RoomPage() {
         </div>
 
         <div style={styles.tabContent}>
-          {activeTab === "members" && <Members members={members} />}
+          {activeTab === "members" && <Members members={members} hostName={hostName} handlePermission={handlePermission} currentUser={currentUser} permittedMember={permittedMember} />}
           {activeTab === "chat" && <ChatBox roomId={roomId} currentUser={currentUser} />}
-          {activeTab === "image" && <SummaryGeneration roomId={roomId} setSummary={setSummary} summary = {summary} />}
+          {activeTab === "image" && <SummaryGeneration roomId={roomId} setSummary={setSummary} summary={summary} />}
         </div>
       </div>
     </div>
@@ -198,7 +228,7 @@ function MicIcon({ isOn }) {
   );
 }
 
-function Members({ members, user }) {
+function Members({ members, hostName, handlePermission, currentUser, permittedMember }) {
   if (!members || members.length === 0) {
     return (
       <p style={{ opacity: 0.6, fontSize: "13px", padding: "10px" }}>
@@ -207,15 +237,17 @@ function Members({ members, user }) {
     );
   }
 
+
+
   return (
     <div>
       {members.map((m) => (
         <div key={m.userId} style={memberStyles.row}>
           <div style={memberStyles.userInfo}>
-            <div style={memberStyles.avatar}>
+            <div style={memberStyles.avatar} className={`${m.userId === currentUser.userId ? 'border-8 border-emerald-500' : ''}`}>
               {m.name ? m.name.charAt(0).toUpperCase() : "?"}
             </div>
-            <span style={memberStyles.name}>{m.name || "Anonymous"}</span>
+            <span style={memberStyles.name} className={`${permittedMember.includes(m.userId)?'text-red-200':''}`}>{m.name || "Anonymous"}</span>
           </div>
 
           <div style={memberStyles.actions}>
@@ -223,9 +255,16 @@ function Members({ members, user }) {
               🎙️
             </button>
 
-            <button style={styles.drawBtn} title="Draw permission">
-              ✏️
-            </button>
+            {
+              (currentUser.name === hostName && m.name !== hostName) &&
+              <button style={styles.drawBtn} title="Draw permission" onClick={() => { handlePermission(m.userId) }}>
+                {
+                  permittedMember.includes(m.userId)? '❌':'✏️'
+                }
+                
+              </button>
+            }
+
           </div>
         </div>
       ))}
@@ -324,18 +363,18 @@ function ChatBox({ roomId, currentUser }) {
   );
 }
 
-function SummaryGeneration({ roomId ,setSummary, summary}) {
-  
+function SummaryGeneration({ roomId, setSummary, summary }) {
+
   const [loading, setLoading] = useState(false);
 
   const handleOnClick = async () => {
     setLoading(true);
-    try{
+    try {
       const { data } = await api.post(`/summary/${roomId}`);
       setSummary(data.output);
-    }catch(err){
+    } catch (err) {
       toast.error(err.message?.data?.msg || "something went wrong");
-    }finally{
+    } finally {
       setLoading(false);
     }
   }
@@ -362,23 +401,23 @@ function SummaryGeneration({ roomId ,setSummary, summary}) {
       `}</style>
 
       <div className="flex justify-around items-center">
-      <button 
-        className="text-white border border-white hover:bg-white hover:text-black transition-all shadow-md shadow-white rounded"
-        style={{ padding: "10px 20px" }}
-        onClick={handleOnClick}
-        disabled={loading}
-      >
-        {loading ? "Generating..." : "Generate Summary!"}
-      </button>
-      {
-        summary && 
-        <button onClick={()=>navigator.clipboard.writeText(summary)} className="text-2xl rounded hover:bg-white relative after:content-['Copy Summary'] after:absolute after:bottom-50 after:w-50 after:h-50 after:bg-amber-300 " style={{padding:"5px 10px"}}>
-        📋
-      </button>
-      }
-      
-      </div>
+        <button
+          className="text-white border border-white hover:bg-white hover:text-black transition-all shadow-md shadow-white rounded"
+          style={{ padding: "10px 20px" }}
+          onClick={handleOnClick}
+          disabled={loading}
+        >
+          {loading ? "Generating..." : "Generate Summary!"}
+        </button>
         {
+          summary &&
+          <button onClick={() => navigator.clipboard.writeText(summary)} className="text-2xl rounded hover:bg-white relative after:content-['Copy Summary'] after:absolute after:bottom-50 after:w-50 after:h-50 after:bg-amber-300 " style={{ padding: "5px 10px" }}>
+            📋
+          </button>
+        }
+
+      </div>
+      {
         summary && (
           <div className="summary-output" style={{ marginTop: "20px" }}>
             <div dangerouslySetInnerHTML={{ __html: summary }} />
