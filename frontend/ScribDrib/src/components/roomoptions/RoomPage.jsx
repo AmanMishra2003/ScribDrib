@@ -19,6 +19,7 @@ function RoomPage() {
   const [permittedMember, setPermittedMember] = useState([]);
 
   useEffect(() => {
+
     if (!roomId) {
       navigate("/");
       return;
@@ -27,6 +28,7 @@ function RoomPage() {
     // Connect socket immediately if not connected
     if (!socket.connected) {
       socket.connect();
+      // navigate('/');
     }
 
     // Wait for connection before joining
@@ -67,9 +69,10 @@ function RoomPage() {
         if (prev.some((u) => u.userId === userId)) return prev;
         return [...prev, { userId, name }];
       });
+      sessionStorage.setItem("inRoom", "true");
       toast.info(`${name} joined the room`);
     };
- 
+
     //handle user joined
     const handleUserLeft = ({ userId, name }) => {
       console.log("User left:", { userId, name });
@@ -179,9 +182,9 @@ function RoomPage() {
           </div>
         </div>
         {
-          currentUser && 
+          currentUser &&
           <Whiteboard roomId={roomId} initialBoard={boardRef.current} permittedMember={permittedMember} currentUser={currentUser} hostName={hostName} />
-         } 
+        }
       </div>
 
       {/* RIGHT PANEL */}
@@ -238,7 +241,7 @@ function Members({ members, hostName, handlePermission, currentUser, permittedMe
       </p>
     );
   }
-  
+
   return (
     <div>
       {members.map((m) => (
@@ -247,7 +250,7 @@ function Members({ members, hostName, handlePermission, currentUser, permittedMe
             <div style={memberStyles.avatar} className={`${m.userId === currentUser.userId ? 'border-8 border-emerald-500' : ''}`}>
               {m.name ? m.name.charAt(0).toUpperCase() : "?"}
             </div>
-            <span style={memberStyles.name} className={`${permittedMember.includes(m.userId)?'text-red-200':''}`}>{m.name || "Anonymous"}</span>
+            <span style={memberStyles.name} className={`${permittedMember.includes(m.userId) ? 'text-red-200' : ''}`}>{m.name || "Anonymous"}</span>
           </div>
 
           <div style={memberStyles.actions}>
@@ -259,9 +262,9 @@ function Members({ members, hostName, handlePermission, currentUser, permittedMe
               (currentUser.name === hostName && m.name !== hostName) &&
               <button style={styles.drawBtn} title="Draw permission" onClick={() => { handlePermission(m.userId) }}>
                 {
-                  permittedMember.includes(m.userId)? '❌':'✏️'
+                  permittedMember.includes(m.userId) ? '❌' : '✏️'
                 }
-                
+
               </button>
             }
 

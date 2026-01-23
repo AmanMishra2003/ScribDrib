@@ -50,6 +50,7 @@ const Whiteboard = ({ roomId, initialBoard, permittedMember, currentUser, hostNa
     const [strokeWidth, setStrokeWidth] = useState(3);
     const [canUndo, setCanUndo] = useState(false);
     const [canRedo, setCanRedo] = useState(false);
+    const [isCanvasReady,setIsCanvasReady] = useState(false);
 
     const activeToolRef = useRef(activeTool);
     const strokeColorRef = useRef(strokeColor);
@@ -71,96 +72,8 @@ const Whiteboard = ({ roomId, initialBoard, permittedMember, currentUser, hostNa
     const currentShape = useRef(null);
     const startPoint = useRef({ x: 0, y: 0 }); 
 
-    // Save state and emit to server
-    const saveState = (immediate = false) => {
-        if (!fabricCanvas.current || isStateChanging.current) return;
 
-        const json = fabricCanvas.current.toJSON();
-        const serialized = JSON.stringify(json);
-
-        if (undoStack.current[undoStack.current.length - 1] !== serialized) {
-            undoStack.current.push(serialized);
-            if (undoStack.current.length > 50) undoStack.current.shift();
-            redoStack.current = [];
-            setCanUndo(undoStack.current.length > 1);
-            setCanRedo(false);
-
-            if (saveTimeout.current) {
-                clearTimeout(saveTimeout.current);
-            }
-
-            const emitUpdate = () => {
-                console.log("📤 Sending board update:", { objectCount: json?.objects?.length || 0 });
-                socket.emit("board:update", { roomId, boardData: json });
-            };
-
-            if (immediate) {
-                emitUpdate();
-            } else {
-                saveTimeout.current = setTimeout(emitUpdate, 100);
-            }
-        }
-    };
-
-    // Load initial board data
-    useEffect(() => {
-        if (!fabricCanvas.current || !initialBoard || hasLoadedInitialBoard.current) return;
-
-        isStateChanging.current = true;
-        fabricCanvas.current.loadFromJSON(initialBoard, () => {
-            fabricCanvas.current.renderAll();
-            isStateChanging.current = false;
-            hasLoadedInitialBoard.current = true;
-
-            const serialized = JSON.stringify(initialBoard);
-            undoStack.current = [serialized];
-            setCanUndo(false);
-        });
-    }, [initialBoard]);
-
-    // Socket.io board updates 
-    useEffect(() => {
-        if (!fabricCanvas.current) return;
-
-        const handleBoardUpdate = (boardData) => {
-            if (!boardData) return;
-
-            console.log("📥 Received board update:", { objectCount: boardData?.objects?.length || 0 });
-
-            // Prevent processing if it's the same state
-            const currentState = JSON.stringify(fabricCanvas.current.toJSON());
-            const incomingState = JSON.stringify(boardData);
-
-            if (currentState === incomingState) {
-                console.log("⏭️ Skipping identical state");
-                return;
-            }
-
-            isStateChanging.current = true;
-            fabricCanvas.current.loadFromJSON(boardData, () => {
-                fabricCanvas.current.renderAll();
-                isStateChanging.current = false;
-
-                // Update undo stack
-                const serialized = JSON.stringify(boardData);
-                if (undoStack.current[undoStack.current.length - 1] !== serialized) {
-                    undoStack.current.push(serialized);
-                    if (undoStack.current.length > 50) undoStack.current.shift();
-                }
-            });
-        };
-
-        socket.on("board:update", handleBoardUpdate);
-
-        return () => {
-            socket.off("board:update", handleBoardUpdate);
-            if (saveTimeout.current) {
-                clearTimeout(saveTimeout.current);
-            }
-        };
-    }, []);
-
-    // Initialize Canvas
+     // Initialize Canvas
     useEffect(() => {
         if (!canvasRef.current) return;
 
@@ -176,6 +89,7 @@ const Whiteboard = ({ roomId, initialBoard, permittedMember, currentUser, hostNa
         });
 
         fabricCanvas.current = canvas;
+        setIsCanvasReady(true)
 
         const handleResize = () => {
             canvas.setDimensions({
@@ -235,6 +149,104 @@ const Whiteboard = ({ roomId, initialBoard, permittedMember, currentUser, hostNa
             canvas.dispose();
         };
     }, []);
+
+     // Load initial board data
+    useEffect(() => {
+        console.log(!fabricCanvas);
+        console.log(!initialBoard);
+        console.log(hasLoadedInitialBoard.current)
+        if (!isCanvasReady || !initialBoard || hasLoadedInitialBoard.current) return;
+        console.log(initialBoard);
+        isStateChanging.current = true;
+        fabricCanvas.current.loadFromJSON(initialBoard, () => {
+            fabricCanvas.current.renderAll();
+            isStateChanging.current = false;
+            hasLoadedInitialBoard.current = true;
+
+            const serialized = JSON.stringify(initialBoard);
+            undoStack.current = [serialized];
+            setCanUndo(false);
+        });
+        console.log("data2");
+    }, [isCanvasReady, initialBoard]);
+
+
+     // Save state and emit to server
+    const saveState = (immediate = false) => {
+        if (!fabricCanvas.current || isStateChanging.current) return;
+
+        const json = fabricCanvas.current.toJSON();
+        const serialized = JSON.stringify(json);
+
+        if (undoStack.current[undoStack.current.length - 1] !== serialized) {
+            undoStack.current.push(serialized);
+            if (undoStack.current.length > 50) undoStack.current.shift();
+            redoStack.current = [];
+            setCanUndo(undoStack.current.length > 1);
+            setCanRedo(false);
+
+            if (saveTimeout.current) {
+                clearTimeout(saveTimeout.current);
+            }
+
+            const emitUpdate = () => {
+                console.log("📤 Sending board update:", { objectCount: json?.objects?.length || 0 });
+                socket.emit("board:update", { roomId, boardData: json });
+            };
+
+            if (immediate) {
+                emitUpdate();
+            } else {
+                saveTimeout.current = setTimeout(emitUpdate, 100);
+            }
+        }
+    };
+
+
+   
+    // Socket.io board updates 
+    useEffect(() => {
+        if (!fabricCanvas.current) return;
+
+        const handleBoardUpdate = (boardData) => {
+            if (!boardData) return;
+
+            console.log("📥 Received board update:", { objectCount: boardData?.objects?.length || 0 });
+
+            // Prevent processing if it's the same state
+            const currentState = JSON.stringify(fabricCanvas.current.toJSON());
+            const incomingState = JSON.stringify(boardData);
+
+            if (currentState === incomingState) {
+                console.log("⏭️ Skipping identical state");
+                return;
+            }
+
+            isStateChanging.current = true;
+            fabricCanvas.current.loadFromJSON(boardData, () => {
+                fabricCanvas.current.renderAll();
+                isStateChanging.current = false;
+
+                // Update undo stack
+                const serialized = JSON.stringify(boardData);
+                if (undoStack.current[undoStack.current.length - 1] !== serialized) {
+                    undoStack.current.push(serialized);
+                    if (undoStack.current.length > 50) undoStack.current.shift();
+                }
+            });
+        };
+
+        socket.on("board:update", handleBoardUpdate);
+
+        return () => {
+            socket.off("board:update", handleBoardUpdate);
+            if (saveTimeout.current) {
+                clearTimeout(saveTimeout.current);
+            }
+        };
+    }, []);
+
+   
 
     // Sync tool modes
     useEffect(() => {
