@@ -29,6 +29,13 @@ const Tool = {
 
 const BG_COLOR = "#020617";
 
+function hexToRGBA(hex, opacity) {
+    let r = parseInt(hex.slice(1,3), 16);
+    let g = parseInt(hex.slice(3,5), 16);
+    let b = parseInt(hex.slice(5,7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+}
+
 const Whiteboard = ({ roomId, initialBoard }) => {
     const canvasRef = useRef(null);
     const fabricCanvas = useRef(null);
@@ -248,7 +255,7 @@ const Whiteboard = ({ roomId, initialBoard }) => {
                 canvas.freeDrawingBrush.width = strokeWidth * 5;
             } else {
                 canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
-                canvas.freeDrawingBrush.color = strokeColor;
+                canvas.freeDrawingBrush.color = hexToRGBA(strokeColor, 0.3);
                 canvas.freeDrawingBrush.width = strokeWidth * 5;
             }
         }

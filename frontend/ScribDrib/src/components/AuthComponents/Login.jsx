@@ -58,6 +58,7 @@ export default function Login() {
           setRunningLoader(false);
           navigate("/");
       }catch(err){
+        console.log(err);
           toast.error(err?.response?.data?.msg || "Something Went Wrong!!");
           setRunningLoader(false);
       }

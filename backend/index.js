@@ -191,14 +191,14 @@ io.on('connection', (socket) => {
       
       const serialized = JSON.stringify(boardData);
 
+      
+      //Broadcast to OTHERS only (not sender)
+      socket.to(roomId).emit("board:update", boardData);
+      
       await Room.findOneAndUpdate(
         { roomId, isActive: true },
         { boardData: serialized }
       );
-
-      // CRITICAL FIX: Broadcast to OTHERS only (not sender)
-      socket.to(roomId).emit("board:update", boardData);
-      
       console.log(`📤 Server broadcasted board update to room ${roomId} (excluding sender)`);
     } catch (err) {
       console.error("Board update error:", err);

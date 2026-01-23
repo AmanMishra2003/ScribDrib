@@ -34,7 +34,7 @@ router.post('/signup', async (req, res, next) => {
         await newUser.save();
 
         //sign JWT
-        const token = await jwt.sign({ id: newUser._id }, process.env.JWTSECRET, { expiresIn: '1d' });
+        const token = jwt.sign({ id: newUser._id }, process.env.JWTSECRET, { expiresIn: '1d' });
         if (!token) throw Error("there is no token made!!");
         res.status(200).json({
             token,
@@ -68,7 +68,7 @@ router.post('/login', async (req, res, next) => {
                 msg: "User does not Exist!!"
             })
         }
-        // console.log(userExist);
+        console.log(userExist);
 
         //if user exist then compare password
         const isMatch = await bcrypt.compare(password, userExist.password);
@@ -79,7 +79,7 @@ router.post('/login', async (req, res, next) => {
         }
 
         //sign JWT
-        const token = await jwt.sign({ id: userExist._id }, process.env.JWTSECRET, { expiresIn: '1d' });
+        const token = jwt.sign({ id: userExist._id }, process.env.JWTSECRET, { expiresIn: '1d' });
 
         res.status(200).json({
             token,
@@ -91,7 +91,6 @@ router.post('/login', async (req, res, next) => {
         })
 
     } catch (err) {
-        // console.log(err);
         res.status(500).json({
             message: "Server Error",
             errMsg: err

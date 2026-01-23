@@ -26,31 +26,36 @@ router.post('/:id', authorization, async (req, res, next) => {
             return res.status(400).json({ success: false, msg: "No board data available" });
         }
 
-        const prompt = `You are an AI that interprets digital whiteboards.
+        const prompt = `You are an AI that interprets and summarizes digital whiteboards.
 
-Return your output INSIDE a <pre>...</pre> block so that formatting, indentation, bullet points, and line breaks are preserved exactly for the user to copy.
+First, internally combine and analyze ALL whiteboard objects together — shapes, drawings, arrows, text, and layout — as a single unified scene. Understand the full picture, not each object separately.
+
+Return your final output INSIDE a <pre>...</pre> block to preserve formatting, indentation, bullet points, and spacing for easy copying.
 
 Your task:
-Analyze the following Fabric.js JSON data and produce a clean, human-friendly summary in TWO clearly separated sections:
+Using the combined scene understanding, produce a clear, human-friendly summary in TWO sections:
 
 1. **What is on the Screen**
-   - Describe the visible shapes, drawings, text, symbols, or layout.
-   - Mention structure, positioning, and grouping.
-   - Do NOT mention JSON, Fabric.js, object types, or code terms.
+   - Describe the overall visual structure of the board.
+   - Explain what groups, shapes, drawings, or text appear.
+   - Describe relative positioning and layout so the user understands the scene.
+   - Do NOT mention JSON, Fabric.js, or technical object names.
 
 2. **Possible Meaning Behind the Drawing**
-   - Infer what the user was trying to express.
-   - Interpret the idea, concept, or message of the drawing.
+   - Infer what the user may have been trying to express.
+   - Explain the likely idea, concept, comparison, process, or diagram represented.
    - Provide 2–3 possible interpretations (practical, conceptual, creative).
+   - Keep explanations simple, direct, and in everyday easy-to-understand language.
 
 Formatting Requirements:
-- Use bullet points where appropriate.
-- Keep the summary clear and readable.
-- Preserve all spacing and indentation.
-- The entire response must be inside a <pre> block.
+- Use bullet points where suitable.
+- Keep the summary compact, meaningful, and to the point.
+- Preserve indentation and spacing.
+- The entire response must be wrapped inside a <pre> block.
 
 Whiteboard Data:
 ${room.boardData}
+
 `;
 
         const response = await ai.models.generateContent({
