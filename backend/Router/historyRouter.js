@@ -15,5 +15,18 @@ router.get('/', authorization, async (req, res, next) => {
     }
 });
 
+//showing white board route
+router.get('/:id', authorization, async(req,res,next)=>{
+    try{
+        const {id} = req.params;
+        const roomExist = await Room.findOne({isActive:false, roomId:id}).populate('chat');
+        console.log(roomExist);
+        res.status(200).json({objectData: roomExist});
+    }catch(err){
+        console.log(err);
+        res.status(500).json({msg: err});
+    }
+})
+
 
 module.exports = router;

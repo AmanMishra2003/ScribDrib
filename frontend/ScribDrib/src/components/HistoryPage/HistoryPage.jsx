@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Play, Calendar, User } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import "./HistoryPage.css";
 import api from "../../API/axios";
 import { toast } from "react-toastify";
@@ -34,9 +34,6 @@ export default function HistoryPage() {
     navigate("/");
   };
 
-//  const handleOpenRoom = (roomId) => {
-//   navigate(`/history/room/${roomId}`);
-// };
 
   return (
     <div className="history-page-wrapper">
@@ -103,13 +100,13 @@ export default function HistoryPage() {
                   </div>
 
                   {/* Open Button */}
-                  <button
-                    // onClick={() => handleOpenRoom(room.id)}
+                  <Link
+                     to={`/history/${room.roomId}`}
                     className="history-open-button"
                   >
                     <Play size={20} fill="white" />
                     <span>Open</span>
-                  </button>
+                  </Link>
                 </div>
               </div>
             ))}
@@ -144,13 +141,13 @@ export default function HistoryPage() {
                   </div>
 
                   {/* Open Button */}
-                  <button
-                    onClick={() => handleOpenRoom(room.id)}
+                  <Link
+                    to={`/history/${room.roomId}`}
                     className="history-open-button"
                   >
                     <Play size={20} fill="white" />
                     
-                  </button>
+                  </Link>
                 </div>
               </div>
             ))}

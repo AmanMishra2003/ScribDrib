@@ -1,11 +1,7 @@
 import './App.css'
 import { Routes, Route,Navigate } from 'react-router-dom'
 import { ToastContainer } from 'react-toastify';
-import RoomOptions from "./components/roomoptions/roomOptions.jsx";
-import RoomPage from "./components/roomoptions/RoomPage.jsx";
-import HistoryPage from "./components/HistoryPage/HistoryPage.jsx";
-import PageNotFound from './components/notFoundPage/PageNotFound';
-//import HistoryRoomPage from "./components/HistoryPage/HistoryRoomPage.jsx";
+
 
 
 // HomePage
@@ -17,10 +13,19 @@ import AuthComponent from './components/AuthComponents/AuthComponent'
 import Login from './components/AuthComponents/Login'
 import Signup from './components/AuthComponents/Signup'
 
+//Room components
+import RoomOptions from "./components/roomoptions/roomOptions.jsx";
+import RoomPage from "./components/roomoptions/RoomPage.jsx";
+
 
 
 // White Board Demo Component
 import Whiteboard from './components/WhiteBoardLibrary/WhiteBoard';
+
+//History Page Components
+import HistoryPage from "./components/HistoryPage/HistoryPage.jsx";
+import PageNotFound from './components/notFoundPage/PageNotFound';
+import WhiteboardHistoryPage from './components/HistoryPage/WhiteboardHistoryPage';
 
 function ProtectRoute({ children }) {
   const token = localStorage.getItem("token");
@@ -43,7 +48,7 @@ function App() {
       <Route path="/joinRoom" element={<ProtectRoute><RoomOptions /></ProtectRoute>} />
       <Route path="/room/:roomId" element={<ProtectRoute><RoomPage/></ProtectRoute>}/>
       <Route path="/history" element={<ProtectRoute><HistoryPage /></ProtectRoute>}/>
-      {/* <Route path="/history/whiteboard" element={<ProtectRoute><WhiteboardHistoryPage /></ProtectRoute>}/> */}
+      <Route path="/history/:roomId" element={<ProtectRoute><WhiteboardHistoryPage /></ProtectRoute>}/>
   {/*<Route 
   path="/history/room/:roomId" 
   element={<ProtectRoute><HistoryRoomPage /></ProtectRoute>}

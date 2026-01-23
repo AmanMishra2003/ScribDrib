@@ -107,7 +107,7 @@ const Whiteboard = ({ roomId, initialBoard }) => {
         });
     }, [initialBoard]);
 
-    // Socket.io board updates - FIXED
+    // Socket.io board updates 
     useEffect(() => {
         if (!fabricCanvas.current) return;
 
