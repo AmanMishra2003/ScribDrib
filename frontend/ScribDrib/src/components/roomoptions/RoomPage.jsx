@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { socket } from "../../Socket/ws";
 import { toast } from "react-toastify";
 import Whiteboard from "../WhiteBoardLibrary/WhiteBoard";
+import api from "../../API/axios";
 
 function RoomPage() {
   const { roomId } = useParams();
@@ -14,6 +15,7 @@ function RoomPage() {
   const boardRef = useRef(null);
   const hasJoined = useRef(false);
   const [hostName, setHostName] = useState("");
+  const [summary, setSummary] = useState('');
   // const host = useRef(null);
 
   useEffect(() => {
@@ -49,7 +51,7 @@ function RoomPage() {
       if (user) {
         setCurrentUser(user);
       }
-      if(host){
+      if (host) {
         setHostName(host);
       }
 
@@ -169,14 +171,14 @@ function RoomPage() {
             style={activeTab === "image" ? styles.activeTab : styles.tab}
             onClick={() => setActiveTab("image")}
           >
-            Image Generation
+            Summary Generation
           </button>
         </div>
 
         <div style={styles.tabContent}>
-          {activeTab === "members" && <Members members={members}  />}
+          {activeTab === "members" && <Members members={members} />}
           {activeTab === "chat" && <ChatBox roomId={roomId} currentUser={currentUser} />}
-          {activeTab === "image" && <ImageGenerator />}
+          {activeTab === "image" && <SummaryGeneration roomId={roomId} setSummary={setSummary} summary = {summary} />}
         </div>
       </div>
     </div>
@@ -322,10 +324,68 @@ function ChatBox({ roomId, currentUser }) {
   );
 }
 
-function ImageGenerator() {
+function SummaryGeneration({ roomId ,setSummary, summary}) {
+  
+  const [loading, setLoading] = useState(false);
+
+  const handleOnClick = async () => {
+    setLoading(true);
+    try{
+      const { data } = await api.post(`/summary/${roomId}`);
+      setSummary(data.output);
+    }catch(err){
+      toast.error(err.message?.data?.msg || "something went wrong");
+    }finally{
+      setLoading(false);
+    }
+  }
+
   return (
-    <div style={{ padding: "20px", textAlign: "center", opacity: 0.6 }}>
-      <p>Image Generator UI Coming Soon...</p>
+    <div style={{ padding: "20px", textAlign: "center", opacity: 0.9 }}>
+
+      {/* ⭐ INLINE STYLE TAG FOR PERFECT FORMATTING */}
+      <style>{`
+        .summary-output pre {
+          white-space: pre-wrap;
+          background: #0d0d0d;
+          color: #e8e8e8;
+          padding: 16px;
+          border-radius: 8px;
+          font-family: "Fira Code", "Consolas", "Menlo", monospace;
+          font-size: 14px;
+          line-height: 1.55;
+          text-align: left;
+          border: 1px solid #333;
+          box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+          overflow-x: auto;
+        }
+      `}</style>
+
+      <div className="flex justify-around items-center">
+      <button 
+        className="text-white border border-white hover:bg-white hover:text-black transition-all shadow-md shadow-white rounded"
+        style={{ padding: "10px 20px" }}
+        onClick={handleOnClick}
+        disabled={loading}
+      >
+        {loading ? "Generating..." : "Generate Summary!"}
+      </button>
+      {
+        summary && 
+        <button onClick={()=>navigator.clipboard.writeText(summary)} className="text-2xl rounded hover:bg-white relative after:content-['Copy Summary'] after:absolute after:bottom-50 after:w-50 after:h-50 after:bg-amber-300 " style={{padding:"5px 10px"}}>
+        📋
+      </button>
+      }
+      
+      </div>
+        {
+        summary && (
+          <div className="summary-output" style={{ marginTop: "20px" }}>
+            <div dangerouslySetInnerHTML={{ __html: summary }} />
+          </div>
+        )
+      }
+
     </div>
   );
 }
@@ -497,14 +557,14 @@ const chatStyles = {
     flexShrink: 0,
   },
 
-  userName: { 
-    fontWeight: "600", 
+  userName: {
+    fontWeight: "600",
     fontSize: "13px",
     marginBottom: "4px",
     color: "#60a5fa",
   },
-  
-  messageText: { 
+
+  messageText: {
     marginBottom: "6px",
     fontSize: "14px",
     lineHeight: "1.4",

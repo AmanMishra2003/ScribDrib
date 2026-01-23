@@ -32,10 +32,12 @@ mongoose.connect(mongodbPath).then(() => {
 const HomeRouter = require('./Router/homeRouter');
 const AuthRouter = require('./Router/authRouter');
 const HistoryRouter = require('./Router/historyRouter');
+const SummaryRouter = require('./Router/summaryRouter')
 
 app.use('/', HomeRouter);
 app.use('/auth', AuthRouter);
 app.use('/history', HistoryRouter);
+app.use('/summary', SummaryRouter)
 
 // Error handler
 app.use((err, req, res, next) => {
