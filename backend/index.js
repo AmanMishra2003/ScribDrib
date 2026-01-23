@@ -65,7 +65,7 @@ const socketToUser = new Map();
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.id}`);
   const user = socket.user;
-  
+
   // Store socket mapping
   socketToUser.set(socket.id, user);
 
@@ -100,12 +100,13 @@ io.on('connection', (socket) => {
   socket.on('joinRoom', async ({ roomId }) => {
     try {
       // Find room and populate chat
-      const room = await Room.findOne({ roomId, isActive: true })
+      // Modified to allow joining inactive (historical) rooms
+      const room = await Room.findOne({ roomId })
         .populate({
           path: 'chat',
           options: { sort: { createdAt: 1 } }
         }).populate('host');
-      
+
       if (!room) {
         return socket.emit('error', { msg: "Room not found or inactive" });
       }
@@ -151,9 +152,9 @@ io.on('connection', (socket) => {
         host: room.host.fullName,
         roomName: room.roomName,
         boardData: parsedBoard,
-        users: room.users.map(u => ({ 
-          userId: u.userId, 
-          name: u.name 
+        users: room.users.map(u => ({
+          userId: u.userId,
+          name: u.name
         })),
         currentUser: {
           userId: user._id,
@@ -186,7 +187,7 @@ io.on('connection', (socket) => {
   socket.on("board:update", async ({ roomId, boardData }) => {
     try {
       console.log(`📥 Server received board update from ${user.fullName} for room ${roomId}`);
-      
+
       const serialized = JSON.stringify(boardData);
 
       await Room.findOneAndUpdate(
@@ -196,7 +197,7 @@ io.on('connection', (socket) => {
 
       // CRITICAL FIX: Broadcast to OTHERS only (not sender)
       socket.to(roomId).emit("board:update", boardData);
-      
+
       console.log(`📤 Server broadcasted board update to room ${roomId} (excluding sender)`);
     } catch (err) {
       console.error("Board update error:", err);
@@ -264,21 +265,20 @@ io.on('connection', (socket) => {
   socket.on("disconnect", async () => {
     try {
       console.log(`User disconnected: ${socket.id}`);
-      
+
       const disconnectedUser = socketToUser.get(socket.id);
       if (!disconnectedUser) {
         console.log("No user found for socket:", socket.id);
         return;
       }
 
-      // Find the active room where this user exists
+      // Find the room where this user exists (active or inactive)
       const room = await Room.findOne({
         "users.socketId": socket.id,
-        isActive: true,
       });
 
       if (!room) {
-        console.log("No active room found for user");
+        console.log("No room found for user");
         socketToUser.delete(socket.id);
         return;
       }
@@ -290,29 +290,29 @@ io.on('connection', (socket) => {
         (u) => u.socketId !== socket.id
       );
 
-      // Check if host left
-      if (room.host.toString() === disconnectedUser._id.toString()) {
+      // Check if host left AND room is active
+      if (room.isActive && room.host.toString() === disconnectedUser._id.toString()) {
         room.isActive = false;
         await room.save();
 
         // Notify everyone room is closed
         io.to(room.roomId).emit("room-closed");
-        
+
         // Make all sockets leave the room
         const socketsInRoom = await io.in(room.roomId).fetchSockets();
         socketsInRoom.forEach(s => s.leave(room.roomId));
-        
+
         console.log(`Host left. Room ${room.roomId} closed.`);
       } else {
         // Normal user left
         await room.save();
-        
+
         // Notify others
         socket.to(room.roomId).emit("user-left", {
           userId: disconnectedUser._id,
           name: disconnectedUser.fullName,
         });
-        
+
         console.log(`User ${disconnectedUser.fullName} left room ${room.roomId}`);
       }
 
