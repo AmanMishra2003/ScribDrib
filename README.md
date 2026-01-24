@@ -245,9 +245,13 @@ The application is deployed at: [https://scrib-drib-bnqh.vercel.app](https://scr
 - **Ayush Pratap Singh** - Full Stack Developer
 - **Suraj Kumar Gupta** - Backend Engineer
 
+
 ## 📄 License
 
-This project is open source and available under the [MIT License](LICENSE).
+This project is licensed under the **GNU General Public License v3.0**  
+See the full license here:  
+👉 https://www.gnu.org/licenses/gpl-3.0.en.html
+
 
 ## 🐛 Known Issues & Limitations
 
