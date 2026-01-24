@@ -266,11 +266,14 @@ This project is open source and available under the [MIT License](LICENSE).
 - Whiteboard recording and playback
 - Mobile app development
 
-## 📞 Support
+## 🖼️ Project Preview
 
-For issues, questions, or contributions:
-- GitHub Issues: [Report a bug](https://github.com/AmanMishra2003/ScribDrib/issues)
-- Email: Contact the development team
+![ScribDrib Whiteboard](./Screenshots/s1.jpeg)
+###
+![ScribDrib Whiteboard](./Screenshots/s2.jpeg)
+###
+![ScribDrib Whiteboard](./Screenshots/s3.jpeg)
+###
 
 ---
 
