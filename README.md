@@ -1,274 +1,277 @@
-# ScribDrib - Real-Time Collaborative Whiteboard
+# ScribDrib - Real-time Collaborative Whiteboard
 
-## Project Overview
+A modern, real-time collaborative whiteboard application built with the MERN stack, featuring instant synchronization, interactive drawing tools, and seamless team collaboration.
 
-**ScribDrib** is a real-time collaborative whiteboard application designed for team coordination and visual brainstorming. Built for DevJam 2026, it enables multiple users to work simultaneously on shared boards with live synchronization.
+![ScribDrib Banner](https://img.shields.io/badge/ScribDrib-Collaborative%20Whiteboard-9333EA?style=for-the-badge)
 
-### Team Information
-- **Team Name:** CodeJam
-- **Team Leader:** Aman Mishra (AmanMishra2003)
-- **Members:** 
-  - Ayush Pratap Singh (ayush09-15)
-  - Suraj Kumar Gupta (suraj3722)
+## 🌟 Features
 
----
+### Core Functionality
+- **Real-time Collaboration**: Instant canvas synchronization across all connected users using Socket.IO
+- **Advanced Drawing Tools**: 
+  - Pen/Pencil with customizable stroke width and color
+  - Shapes (Rectangle, Circle, Line)
+  - Text tool with inline editing
+  - Highlighter/Eraser functionality
+- **Object Manipulation**: Select, move, resize, rotate, duplicate, and delete objects
+- **Grouping**: Group and ungroup multiple objects for easier management
+- **Undo/Redo**: Complete history management with up to 50 states
+- **Permission System**: Host can grant/revoke drawing permissions to specific users
+- **Live Chat**: Built-in chat system with message history
+- **AI-Powered Summary**: Generate intelligent summaries of whiteboard content using Google Gemini AI
+- **Session History**: Access and view past whiteboard sessions
+- **PDF Export**: Download whiteboard sessions as PDF files
 
-## Technology Stack
+### User Management
+- **JWT Authentication**: Secure user authentication with bcrypt password hashing
+- **Room System**: 
+  - Create unique rooms with custom names
+  - Join rooms via unique 8-character room IDs
+  - Share room links for easy access
+- **User Presence**: See who's online and track active participants
+- **Host Controls**: Room creator has special privileges for permissions and room management
+
+### Technical Features
+- **Responsive Design**: Works seamlessly on desktop and mobile devices
+- **Auto-save**: Continuous board state saving with debouncing
+- **Session Persistence**: Board data stored in MongoDB for 30 days
+- **Real-time Sync**: Zero-latency updates using WebSocket connections
+- **Optimized Rendering**: Efficient canvas rendering with Fabric.js
+
+## 🚀 Tech Stack
 
 ### Frontend
-- **Framework:** React 19.2.0
-- **UI Styling:** Tailwind CSS 4.1.18
-- **Canvas Library:** Fabric.js 7.1.0
-- **Routing:** React Router DOM 7.12.0
-- **Real-time Communication:** Socket.IO Client 4.8.3
-- **HTTP Client:** Axios 1.13.2
-- **Animations:** GSAP 3.14.2
-- **Icons:** Lucide React
-- **Notifications:** React Toastify
+- **React** - UI framework
+- **Fabric.js** - Canvas manipulation and rendering
+- **Socket.IO Client** - Real-time communication
+- **React Router** - Client-side routing
+- **Tailwind CSS** - Styling framework
+- **Axios** - HTTP client
+- **React Toastify** - Notification system
 
 ### Backend
-- **Runtime:** Node.js
-- **Framework:** Express.js 5.2.1
-- **Database:** MongoDB (Mongoose 9.1.3)
-- **Real-time Engine:** Socket.IO 4.8.3
-- **Authentication:** JWT (jsonwebtoken 9.0.3)
-- **Password Security:** Bcrypt.js 3.0.3
+- **Node.js** - Runtime environment
+- **Express.js** - Web framework
+- **Socket.IO** - WebSocket server
+- **MongoDB** - Database
+- **Mongoose** - ODM for MongoDB
+- **JWT** - Authentication tokens
+- **bcryptjs** - Password hashing
+- **Google Gemini AI** - AI summary generation
 
----
+## 📋 Prerequisites
 
-## Current Features (Implemented)
+- Node.js (v20.0.0 or higher)
+- MongoDB (local or Atlas)
+- npm or yarn package manager
 
-### 1. User Authentication System ✅
-- **User Registration:** Secure signup with password hashing
-- **User Login:** JWT-based authentication
-- **Session Management:** Token-based authorization
-- **Protected Routes:** Access control for authenticated users
-- **Local Storage Integration:** Persistent user sessions
+## 🛠️ Installation
 
-**Files:**
-- `backend/Router/authRouter.js` - Authentication routes
-- `backend/models/authModel.js` - User schema with password hashing
-- `frontend/src/components/AuthComponents/` - Login/Signup UI
-
----
-
-### 2. Real-Time Room System ✅
-- **Create Room:** Host can create collaborative rooms with unique IDs
-- **Join Room:** Users can join existing rooms via room ID
-- **Room ID Generation:** UUID-based 8-character unique identifiers
-- **Socket Authentication:** Token verification for WebSocket connections
-- **Room Lifecycle Management:**
-  - Active room tracking
-  - User presence tracking
-  - Host-based room closure
-  - Automatic cleanup on host disconnect
-
-**Files:**
-- `backend/index.js` - Socket.IO server setup
-- `backend/models/roomModel.js` - Room schema
-- `frontend/src/components/roomoptions/` - Room creation/joining UI
-
----
-
-### 3. Advanced Whiteboard Features ✅
-
-#### Drawing Tools
-- **Select Tool:** Object selection and manipulation
-- **Pen Tool:** Freehand drawing with customizable stroke
-- **Shape Tools:**
-  - Rectangle
-  - Circle
-  - Line
-- **Text Tool:** Editable text annotations
-- **Eraser Tool:** Object removal
-
-#### Customization Options
-- **Stroke Color Picker:** Full color spectrum
-- **Fill Color Picker:** Transparent or solid fills
-- **Stroke Width:** Adjustable from 1-20px
-- **Dynamic Properties:** Real-time property updates for selected objects
-
-#### Canvas Operations
-- **Undo/Redo:** Full history management (50 states)
-- **Delete Objects:** Remove selected elements
-- **Duplicate:** Clone selected objects
-
-**Files:**
-- `frontend/src/components/WhiteBoardLibrary/WhiteBoard.jsx` - Complete whiteboard implementation
-
----
-
-### 4. UI/UX Features ✅
-- **Dark Theme:** Modern dark mode interface
-- **Loading Indicators:** Visual feedback for async operations
-- **Toast Notifications:** User action confirmations
-- **Professional Forms:** Validation and error handling
-
-**Files:**
-- `frontend/src/components/AuthComponents/auth.css` - Custom styled auth pages
-- `frontend/src/index.css` - Global Tailwind configuration
-
----
-
-### 5. API Architecture ✅
-- **RESTful Endpoints:**
-  - `POST /auth/signup` - User registration
-  - `POST /auth/login` - User authentication
-- **WebSocket Events:**
-  - `createRoom` - Room creation
-  - `joinRoom` - Join existing room
-  - `disconnect` - User disconnect handling
-- **Axios Interceptors:**
-  - Automatic token injection
-  - Unauthorized request handling
-
-**Files:**
-- `frontend/src/API/axios.js` - Configured Axios instance
-- `backend/middleware/socketAuth.js` - Socket authentication middleware
-
----
-
-## Planned Features (Roadmap)
-
-### Real-Time Synchronization 🔄
-**Priority:** HIGH
-
-- **Canvas State Sync:** Broadcast drawing operations to all room participants
-- **Cursor Tracking:** Show other users' cursor positions
-- **Active User Indicators:** Display who's currently drawing
-- **Presence System:** Real-time user join/leave notifications
-
-**Technical Approach:**
-```javascript
-// Event structure
-socket.emit('canvas:draw', {
-  roomId,
-  action: 'object:added',
-  object: fabricObject.toJSON()
-});
+### 1. Clone the Repository
+```bash
+git clone https://github.com/AmanMishra2003/ScribDrib.git
+cd ScribDrib
 ```
 
----
-
-### Permission System 👥
-**Priority:** MEDIUM
-
-- **Role-Based Access:**
-  - Host: Full control
-  - Editor: Can draw and edit
-  - Viewer: Read-only access
-- **Individual Permissions:** Toggle draw access per user
-- **Lock Objects:** Prevent modification of specific elements
-- **Permission UI:** Visual indicators for user roles
-
-**Database Update:**
-```javascript
-users: [{
-  userId: ObjectId,
-  role: String, // 'host' | 'editor' | 'viewer'
-  permissions: {
-    canDraw: Boolean,
-    canDelete: Boolean,
-    canExport: Boolean
-  }
-}]
-```
-
----
-
-## Project Structure
-
-```
-ScribDrib/
-├── backend/
-│   ├── Router/
-│   │   ├── authRouter.js      # Authentication routes
-│   │   └── homeRouter.js      # Home routes
-│   ├── models/
-│   │   ├── authModel.js       # User schema
-│   │   └── roomModel.js       # Room schema
-│   ├── middleware/
-│   │   ├── authorization.js   # HTTP auth middleware
-│   │   └── socketAuth.js      # WebSocket auth
-│   └── index.js               # Server entry point
-│
-├── frontend/ScribDrib/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── AuthComponents/   # Login/Signup
-│   │   │   ├── Home/             # Landing page
-│   │   │   ├── roomoptions/      # Room create/join
-│   │   │   ├── WhiteBoardLibrary/# Canvas implementation
-│   │   │   └── ui/               # Reusable components
-│   │   ├── API/
-│   │   │   └── axios.js          # API client
-│   │   ├── Socket/
-│   │   │   └── ws.js             # Socket.IO client
-│   │   ├── App.jsx               # Main app component
-│   │   └── main.jsx              # Entry point
-│   └── public/
-│
-└── package.json
-```
-
----
-
-## Installation & Setup
-
-### Prerequisites
-- Node.js >= 20.0.0
-- MongoDB installed and running
-- npm or yarn
-
-### Backend Setup
+### 2. Backend Setup
 ```bash
 cd backend
 npm install
 ```
 
-Create `.env` file:
+Create a `.env` file in the backend directory:
 ```env
-DATABASEURL=mongodb://localhost:27017/scribdrib
-JWTSECRET=your_secret_key_here
+PORT=3000
+DATABASEURL=your_mongodb_connection_string
+JWTSECRET=your_jwt_secret_key
+GEMINIAPIKEY=your_google_gemini_api_key
 ```
 
-Start server:
-```bash
-npm start
-```
-
-### Frontend Setup
+### 3. Frontend Setup
 ```bash
 cd frontend/ScribDrib
 npm install
+```
+
+Create a `.env` file in the frontend directory:
+```env
+PROD=false
+VITE_SERVER_URL=http://localhost:3000
+```
+
+For production:
+```env
+PROD=true
+VITE_SERVER_URL=your_production_backend_url
+```
+
+### 4. Run the Application
+
+**Development Mode:**
+
+Terminal 1 (Backend):
+```bash
+cd backend
+npm start
+```
+
+Terminal 2 (Frontend):
+```bash
+cd frontend/ScribDrib
 npm run dev
 ```
 
-Application runs on:
-- Frontend: `http://localhost:5173`
-- Backend: `http://localhost:3000`
+The application will be available at `http://localhost:5173`
+
+## 📖 Usage Guide
+
+### Creating a Room
+1. Sign up or log in to your account
+2. Click "Create Room" from the home page
+3. Enter a room name
+4. Share the generated room ID or link with collaborators
+
+### Joining a Room
+1. Click "Join Room"
+2. Enter the room ID or use a shared link
+3. Start collaborating immediately
+
+### Drawing Tools
+- **Select (V)**: Click to select and manipulate objects
+- **Pen**: Freehand drawing
+- **Shapes**: Create rectangles, circles, and lines
+- **Text**: Click to add and edit text
+- **Highlighter**: Semi-transparent drawing tool
+
+### Keyboard Shortcuts
+- `Ctrl/Cmd + Z`: Undo
+- `Ctrl/Cmd + Y`: Redo
+- `Ctrl/Cmd + D`: Duplicate selected object
+- `Delete/Backspace`: Delete selected object
+
+### Permission Management
+- Host can toggle drawing permissions for individual users
+- Users with permission see full toolbar; others have read-only access
+
+### AI Summary
+1. Click "Summary Generation" tab in the right panel
+2. Click "Generate Summary" button
+3. AI will analyze the whiteboard and provide:
+   - Description of visual elements
+   - Possible interpretations and meanings
+   - Structured insights in formatted text
+
+### Viewing History
+1. Navigate to History page from navbar
+2. View "Created by Me" and "Joined by Me" tabs
+3. Click "Open" to view past sessions
+4. Download sessions as PDF using the download button
+
+## 🏗️ Project Structure
+
+```
+ScribDrib/
+├── backend/
+│   ├── middleware/
+│   │   ├── authorization.js      # JWT middleware
+│   │   ├── socketAuth.js         # Socket authentication
+│   │   └── watchRoomDelete.js    # Room cleanup
+│   ├── models/
+│   │   ├── authModel.js          # User schema
+│   │   ├── roomModel.js          # Room schema
+│   │   └── comments.js           # Chat schema
+│   ├── Router/
+│   │   ├── authRouter.js         # Auth routes
+│   │   ├── historyRouter.js      # History routes
+│   │   └── summaryRouter.js      # AI summary routes
+│   └── index.js                  # Server entry point
+│
+└── frontend/ScribDrib/
+    ├── src/
+    │   ├── API/
+    │   │   └── axios.js          # API configuration
+    │   ├── components/
+    │   │   ├── AuthComponents/   # Login/Signup
+    │   │   ├── Home/             # Landing page
+    │   │   ├── HistoryPage/      # Session history
+    │   │   ├── roomoptions/      # Room creation/joining
+    │   │   └── WhiteBoardLibrary/# Whiteboard logic
+    │   ├── Socket/
+    │   │   └── ws.js             # Socket.IO client
+    │   └── App.jsx               # Main app component
+    └── public/
+```
+
+## 🔒 Security Features
+
+- JWT-based authentication
+- Password hashing with bcrypt
+- Protected routes and middleware
+- Socket.IO authentication
+- CORS configuration
+- Input validation and sanitization
+
+## 🤝 API Endpoints
+
+### Authentication
+- `POST /auth/signup` - User registration
+- `POST /auth/login` - User login
+
+### History
+- `GET /history` - Get user's room history
+- `GET /history/:id` - Get specific room data
+
+### Summary
+- `POST /summary/:id` - Generate AI summary for room
+
+### Socket Events
+- `createRoom` - Create new room
+- `joinRoom` - Join existing room
+- `board:update` - Canvas state updates
+- `chat:send` - Send chat message
+- `permission:update` - Update user permissions
+
+## 🌐 Deployment
+
+The application is deployed at: [https://scrib-drib-bnqh.vercel.app](https://scrib-drib-bnqh.vercel.app)
+
+**Backend**: Render/Railway
+**Frontend**: Vercel
+**Database**: MongoDB Atlas
+
+## 👥 Team
+
+- **Aman Mishra** - Founder & Lead Developer
+- **Ayush Pratap Singh** - Full Stack Developer
+- **Suraj Kumar Gupta** - Backend Engineer
+
+## 📄 License
+
+This project is open source and available under the [MIT License](LICENSE).
+
+## 🐛 Known Issues & Limitations
+
+- Maximum 50 undo/redo states
+- Room data expires after 30 days
+- PDF export limited to current canvas view
+- Real-time sync requires stable internet connection
+
+## 🔮 Future Enhancements
+
+- Voice/Video chat integration
+- Canvas templates library
+- Export to multiple formats (PNG, SVG, JSON)
+- Collaborative cursors
+- Advanced shape library
+- Whiteboard recording and playback
+- Mobile app development
+
+## 📞 Support
+
+For issues, questions, or contributions:
+- GitHub Issues: [Report a bug](https://github.com/AmanMishra2003/ScribDrib/issues)
+- Email: Contact the development team
 
 ---
 
-## Contact & Support
-
-**Team CodeJam**
-- Aman Mishra: aman.2025ca012@mnnit.ac.in
-- Ayush Pratap Singh: ayush.2025ca027@mnnit.ac.in
-- Suraj Kumar Gupta: suraj.2025ca100@mnnit.ac.in
-
----
-
-## Acknowledgments
-
-- **Fabric.js** - Canvas manipulation library
-- **Socket.IO** - Real-time communication
-- **Tailwind CSS** - Utility-first styling
-- **MongoDB** - Document database
-- **React** - UI framework
-
----
-
-**Last Updated:** January 20, 2026  
-**Version:** 1.0.0-beta  
-**Status:** In Active Development
+**Built with ❤️ by Aman Mishra, Ayush Pratap Singh & Suraj Kumar Gupta**
